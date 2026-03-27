@@ -51,7 +51,8 @@ export class Life implements LifeRegistry<LifeCell> {
   }
 
   /**
-   * Enforces {@link MAX_CONCURRENT_ENTITIES}, then creates a cell, meets all active cells, then spawns it.
+   * Enforces {@link MAX_CONCURRENT_ENTITIES}, then creates a cell, meets all pre-spawn active cells,
+   * re-meets each unordered pair among those peers (so updated gain/power/duration propagate), then spawns it.
    */
   async spawnRandomCell(): Promise<void> {
     while (this.active.size >= MAX_CONCURRENT_ENTITIES) {
@@ -59,6 +60,8 @@ export class Life implements LifeRegistry<LifeCell> {
       if (!victim) break;
       await victim.die();
     }
+
+    const peers = [...this.active];
 
     const entity: HarmonicEntity = {
       gain: Math.random() * (GAIN_MAX - GAIN_MIN) + GAIN_MIN,
@@ -72,8 +75,14 @@ export class Life implements LifeRegistry<LifeCell> {
       Math.random() * (DURATION_MAX - DURATION_MIN) + DURATION_MIN,
       Math.random());
 
-    for (const other of [...this.active]) {
+    for (const other of peers) {
       await cell.meet(other);
+    }
+
+    for (let i = 0; i < peers.length; i++) {
+      for (let j = i + 1; j < peers.length; j++) {
+        await peers[i].meet(peers[j]);
+      }
     }
 
     await cell.spawn();
