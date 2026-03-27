@@ -1,0 +1,105 @@
+import type { HarmonicEntity } from "./HarmonicEntity";
+import type { HarmonicEntityPlayer } from "./HarmonicEntityPlayer";
+import { LifeCell, GAIN_MIN, GAIN_MAX, DURATION_MIN, DURATION_MAX } from "./LifeCell";
+import type { LifeRegistry } from "./LifeRegistry";
+
+const TICK_INTERVAL_MS = 40;
+// const INITIAL_LIFETIME = 250;
+// const INITIAL_GAIN = 0.01;
+const MAX_CONCURRENT_ENTITIES = 32;
+
+/**
+ * Standard 88-key piano range A0…C8 (ISO 16:1975 concert pitch A4 = 440 Hz,
+ * 12-tone equal temperament: f = 440 * 2^(n/12), n = semitones from A4).
+ */
+const ISO16_A4_HZ = 440;
+const PIANO_SEMITONE_MIN = -48;
+const PIANO_SEMITONE_MAX = 24;
+
+function randomPaletteFrequency(): number {
+  const span = PIANO_SEMITONE_MAX - PIANO_SEMITONE_MIN + 1;
+  const n = PIANO_SEMITONE_MIN + Math.floor(Math.random() * span);
+  return ISO16_A4_HZ * 2 ** (n / 12);
+}
+
+export class Life implements LifeRegistry<LifeCell> {
+  private readonly active = new Set<LifeCell>();
+  private timer: ReturnType<typeof setInterval> | null = null;
+
+  constructor(private readonly player: HarmonicEntityPlayer) { }
+
+  /** @internal */
+  register(cell: LifeCell): void {
+    this.active.add(cell);
+  }
+
+  /** @internal */
+  unregister(cell: LifeCell): void {
+    this.active.delete(cell);
+  }
+
+  getActiveCells(): ReadonlySet<LifeCell> {
+    return this.active;
+  }
+
+  private pickWeakestCell(): LifeCell | undefined {
+    let best: LifeCell | undefined;
+    for (const c of this.active) {
+      if (!best || c.getPower() <= best.getPower()) best = c;
+    }
+    return best;
+  }
+
+  /**
+   * Enforces {@link MAX_CONCURRENT_ENTITIES}, then creates a cell, meets all active cells, then spawns it.
+   */
+  async spawnRandomCell(): Promise<void> {
+    while (this.active.size >= MAX_CONCURRENT_ENTITIES) {
+      const victim = this.pickWeakestCell();
+      if (!victim) break;
+      await victim.die();
+    }
+
+    const entity: HarmonicEntity = {
+      gain: Math.random() * (GAIN_MAX - GAIN_MIN) + GAIN_MIN,
+      frequency: randomPaletteFrequency(),
+      pan: Math.random() * 2 - 1,
+    };
+    const cell = new LifeCell(
+      this.player,
+      this,
+      entity,
+      Math.random() * (DURATION_MAX - DURATION_MIN) + DURATION_MIN,
+      Math.random());
+
+    for (const other of [...this.active]) {
+      await cell.meet(other);
+    }
+
+    await cell.spawn();
+  }
+
+  /**
+   * Один такт: спавн новой клетки, затем {@link LifeCell.tick} для всех активных.
+   */
+  async tick(): Promise<void> {
+    await this.spawnRandomCell();
+    for (const cell of [...this.active]) {
+      cell.tick();
+    }
+  }
+
+  start(): void {
+    this.timer = setInterval(() => {
+      void this.tick();
+    }, TICK_INTERVAL_MS);
+  }
+
+  stop(): void {
+    if (this.timer !== null) {
+      clearInterval(this.timer);
+      this.timer = null;
+    }
+  }
+
+}
