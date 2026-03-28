@@ -7,7 +7,7 @@ import {
 import type { HarmonicEntity } from "./HarmonicEntity";
 
 /** Linear gain smoothing for attack (0 → level) and release (level → 0), in seconds. */
-const GAIN_TIME = 0.02;
+const SMOOTH_TIME = 0.02;
 /** Wall-clock slack so timers align with audio render timeline, in seconds. */
 const SLACK_TIME = 0.02;
 
@@ -54,7 +54,7 @@ export class HarmonicEntityPlayer {
     gainNode.gain.setValueAtTime(0, t0);
     gainNode.gain.linearRampToValueAtTime(
       entity.gain,
-      t0 + GAIN_TIME,
+      t0 + SMOOTH_TIME,
     );
     const oscillator = new OscillatorNode(this.audioContext, {
       frequency: entity.frequency,
@@ -68,7 +68,7 @@ export class HarmonicEntityPlayer {
     oscillator.start();
 
     this.voices.set(entity, { oscillator, gainNode, panner });
-    await delay(GAIN_TIME + SLACK_TIME);
+    await delay(SMOOTH_TIME + SLACK_TIME);
   }
 
   /**
@@ -85,9 +85,9 @@ export class HarmonicEntityPlayer {
     const g = voice.gainNode.gain;
     g.cancelScheduledValues(t0);
     g.setValueAtTime(g.value, t0);
-    g.linearRampToValueAtTime(0, t0 + GAIN_TIME);
+    g.linearRampToValueAtTime(0, t0 + SMOOTH_TIME);
 
-    await delay(GAIN_TIME + SLACK_TIME);
+    await delay(SMOOTH_TIME + SLACK_TIME);
 
     try {
       voice.oscillator.stop();
@@ -108,19 +108,19 @@ export class HarmonicEntityPlayer {
     const g = voice.gainNode.gain;
     g.cancelScheduledValues(t0);
     g.setValueAtTime(g.value, t0);
-    g.linearRampToValueAtTime(entity.gain, t0 + GAIN_TIME);
+    g.linearRampToValueAtTime(entity.gain, t0 + SMOOTH_TIME);
 
     const f = voice.oscillator.frequency;
     f.cancelScheduledValues(t0);
     f.setValueAtTime(f.value, t0);
-    f.linearRampToValueAtTime(entity.frequency, t0 + GAIN_TIME);
+    f.linearRampToValueAtTime(entity.frequency, t0 + SMOOTH_TIME);
 
     const p = voice.panner.pan;
     p.cancelScheduledValues(t0);
     p.setValueAtTime(p.value, t0);
-    p.linearRampToValueAtTime(entity.pan, t0 + GAIN_TIME);
+    p.linearRampToValueAtTime(entity.pan, t0 + SMOOTH_TIME);
 
-    await delay(GAIN_TIME + SLACK_TIME);
+    await delay(SMOOTH_TIME + SLACK_TIME);
   }
 
   /** Remove all voices and close the context. */

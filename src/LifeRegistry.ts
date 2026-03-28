@@ -3,7 +3,7 @@
  * (avoids Cell ↔ Lifecycle circular module dependency).
  */
 export interface LifeRegistry<T> {
-  register(cell: T): void;
-  unregister(cell: T): void;
-  update(cell: T): void;
+  register(cell: T): Promise<void>;
+  unregister(cell: T): Promise<void>;
+  update(cell: T): Promise<void>;
 }
