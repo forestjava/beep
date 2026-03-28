@@ -85,6 +85,7 @@ export class LifeCell {
   private decreasePower(dissonance: number): void {
     const delta = DECREASE_GAIN_AFFECT * dissonance * this.power;
     this.power = clamp(this.power - delta, 0, 1);
+    if (this.power <= 0) void this.die();
   }
 
   private increaseDuration(consonance: number): void {

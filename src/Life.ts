@@ -3,6 +3,8 @@ import type { HarmonicEntityPlayer } from "./HarmonicEntityPlayer";
 import { LifeCell, GAIN_MIN, GAIN_MAX, DURATION_MIN, DURATION_MAX } from "./LifeCell";
 import type { LifeRegistry } from "./LifeRegistry";
 
+// было бы забавно с течением игры увеличивать интервал интервенции, уменьшать максимальное количество клеток и понижать верхний порог частоты PIANO_SEMITONE_MAX 
+
 const TICK_INTERVAL_MS = 25;
 const MAX_CONCURRENT_ENTITIES = 32;
 
