@@ -20,6 +20,7 @@ function delay(s: number): Promise<void> {
 type Voice = {
   oscillator: OscillatorNode;
   gainNode: GainNode;
+  panner: StereoPannerNode;
 };
 
 /**
@@ -66,7 +67,7 @@ export class HarmonicEntityPlayer {
     panner.connect(this.audioContext.destination);
     oscillator.start();
 
-    this.voices.set(entity, { oscillator, gainNode });
+    this.voices.set(entity, { oscillator, gainNode, panner });
     await delay(GAIN_TIME + SLACK_TIME);
   }
 
@@ -95,9 +96,10 @@ export class HarmonicEntityPlayer {
     }
     voice.oscillator.disconnect();
     voice.gainNode.disconnect();
+    voice.panner.disconnect();
   }
 
-  /** Push current {@link HarmonicEntity.gain} / {@link HarmonicEntity.frequency} into the graph. */
+  /** Push current {@link HarmonicEntity.gain}, {@link HarmonicEntity.frequency}, {@link HarmonicEntity.pan} into the graph. */
   async apply(entity: HarmonicEntity): Promise<void> {
     const voice = this.voices.get(entity);
     if (!voice) return;
@@ -112,6 +114,11 @@ export class HarmonicEntityPlayer {
     f.cancelScheduledValues(t0);
     f.setValueAtTime(f.value, t0);
     f.linearRampToValueAtTime(entity.frequency, t0 + GAIN_TIME);
+
+    const p = voice.panner.pan;
+    p.cancelScheduledValues(t0);
+    p.setValueAtTime(p.value, t0);
+    p.linearRampToValueAtTime(entity.pan, t0 + GAIN_TIME);
 
     await delay(GAIN_TIME + SLACK_TIME);
   }

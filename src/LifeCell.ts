@@ -1,5 +1,4 @@
 import type { HarmonicEntity } from "./HarmonicEntity";
-import type { HarmonicEntityPlayer } from "./HarmonicEntityPlayer";
 import type { LifeRegistry } from "./LifeRegistry";
 
 export const GAIN_MIN = 0;
@@ -18,78 +17,116 @@ function clamp(x: number, lo: number, hi: number): number {
   return Math.min(hi, Math.max(lo, x));
 }
 
+function midiToFrequency(midi: number): number {
+  return 440 * 2 ** ((midi - 69) / 12);
+}
+
+function powerToGain(power: number): number {
+  return GAIN_MIN + clamp(power, 0, 1) * (GAIN_MAX - GAIN_MIN);
+}
+
 export class LifeCell {
   /** Сколько глобальных тактов клетка уже «прожила» в фазе active. */
   private lived = 0;
-  /** Порог: смерть при lived >= duration (может меняться при meet). */
-  private duration: number;
-  private power: number;
+
+  private _midi: number;
+  private _power: number;
+  private _pan: number;
+  private _duration: number;
+
+  /** Синтез; поля обновляются из источников midi/power/pan внутри клетки. */
+  readonly entity: HarmonicEntity;
 
   constructor(
-    private readonly player: HarmonicEntityPlayer,
     private readonly lifecycle: LifeRegistry<LifeCell>,
-    readonly entity: HarmonicEntity,
-    initialLifespanTicks: number,
-    initialPower: number,
+    midi: number,
+    duration: number,
+    power: number,
+    pan: number,
   ) {
-    this.duration = initialLifespanTicks;
-    this.power = initialPower;
+    this._midi = midi;
+    this._duration = duration;
+    this._power = power;
+    this._pan = clamp(pan, -1, 1);
+    this.entity = {
+      frequency: midiToFrequency(this._midi),
+      gain: powerToGain(this._power),
+      pan: this._pan,
+    };
   }
 
-  get frequency(): number {
-    return this.entity.frequency;
+  private get midi(): number {
+    return this._midi;
   }
 
-  getPower(): number {
-    return this.power;
+  private set midi(v: number) {
+    this._midi = v;
+    this.pushEntityFromSources();
   }
 
-  private increaseGain(consonance: number): void {
-    const delta = INCREASE_GAIN_AFFECT * consonance * (GAIN_MAX - this.entity.gain);
-    this.entity.gain = clamp(this.entity.gain + delta, GAIN_MIN, GAIN_MAX);
-    this.player.apply(this.entity);
+  private get power(): number {
+    return this._power;
   }
 
-  private decreaseGain(dissonance: number): void {
-    const delta = DECREASE_GAIN_AFFECT * dissonance * (this.entity.gain - GAIN_MIN);
-    this.entity.gain = clamp(this.entity.gain - delta, GAIN_MIN, GAIN_MAX);
-    this.player.apply(this.entity);
+  private set power(v: number) {
+    this._power = v;
+    this.pushEntityFromSources();
+  }
+
+  private get pan(): number {
+    return this._pan;
+  }
+
+  private set pan(v: number) {
+    this._pan = clamp(v, -1, 1);
+    this.pushEntityFromSources();
+  }
+
+  private get duration(): number {
+    return this._duration;
+  }
+
+  private set duration(v: number) {
+    this._duration = v;
+  }
+
+  private pushEntityFromSources(): void {
+    this.entity.frequency = midiToFrequency(this._midi);
+    this.entity.gain = powerToGain(this._power);
+    this.entity.pan = this._pan;
+    void this.lifecycle.update(this);
   }
 
   private increasePower(consonance: number): void {
-    //const limit = 1;
-    const limit = 2 * this.power;
-    const delta = INCREASE_GAIN_AFFECT * consonance * (limit - this.power);
-    this.power = clamp(this.power + delta, 0, limit);
+    const goal = 2 * this.power;
+    const delta = INCREASE_GAIN_AFFECT * consonance * (goal - this.power);
+    this.power += delta;
   }
 
   private decreasePower(dissonance: number): void {
     const delta = DECREASE_GAIN_AFFECT * dissonance * this.power;
-    this.power = clamp(this.power - delta, 0, 1);
+    this.power -= delta;
     if (this.power <= 0) void this.die();
   }
 
   private increaseDuration(consonance: number): void {
-    //const limit = DURATION_MAX;
-    const limit = 2 * this.duration;
-    const delta = INCREASE_DURATION_AFFECT * consonance * (limit - this.duration);
-    this.duration = clamp(this.duration + delta, DURATION_MIN, limit);
+    const goal = 2 * this.duration;
+    const delta = INCREASE_DURATION_AFFECT * consonance * (goal - this.duration);
+    this.duration += delta;
   }
 
   private decreaseDuration(dissonance: number): void {
     const delta = DECREASE_DURATION_AFFECT * dissonance * (this.duration - DURATION_MIN);
-    this.duration = clamp(this.duration - delta, DURATION_MIN, DURATION_MAX);
+    this.duration -= delta;
     if (this.lived >= this.duration) void this.die();
   }
 
   private applyConsonant(consonance: number): void {
-    this.increaseGain(consonance);
     this.increaseDuration(consonance);
     this.increasePower(consonance);
   }
 
   private applyDissonant(dissonance: number): void {
-    this.decreaseGain(dissonance);
     this.decreaseDuration(dissonance);
     this.decreasePower(dissonance);
   }
@@ -100,15 +137,7 @@ export class LifeCell {
   tick(): void {
     this.lived += 1;
     if (this.lived >= this.duration) void this.die();
-    // if (this.lived >= this.duration) {
-    //   this.duration += this.duration;
-    //   this.entity.frequency = this.entity.frequency / 2;
-    //   this.entity.gain = this.entity.gain / 2;
-    //   this.power += this.power;
-    //   this.player.apply(this.entity);
-    // }
   }
-
 
   /**
    * Mutual interaction: frovaIndex; consonant or dissonant bands apply symmetrically.
@@ -136,13 +165,11 @@ export class LifeCell {
 
   /** Register voice, join lifecycle set. */
   async spawn(): Promise<void> {
-    await this.player.push(this.entity);
-    this.lifecycle.register(this);
+    await this.lifecycle.register(this);
   }
 
   /** Remove from lifecycle and audio; idempotent. */
   async die(): Promise<void> {
-    this.lifecycle.unregister(this);
-    await this.player.remove(this.entity);
+    await this.lifecycle.unregister(this);
   }
 }

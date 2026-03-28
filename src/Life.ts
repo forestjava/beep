@@ -1,25 +1,14 @@
-import type { HarmonicEntity } from "./HarmonicEntity";
 import type { HarmonicEntityPlayer } from "./HarmonicEntityPlayer";
-import { LifeCell, GAIN_MIN, GAIN_MAX, DURATION_MIN, DURATION_MAX } from "./LifeCell";
+import { LifeCell, DURATION_MIN, DURATION_MAX } from "./LifeCell";
 import type { LifeRegistry } from "./LifeRegistry";
 
-// было бы забавно с течением игры увеличивать интервал интервенции, уменьшать максимальное количество клеток и понижать верхний порог частоты PIANO_SEMITONE_MAX 
+// было бы забавно с течением игры увеличивать интервал интервенции, уменьшать максимальное количество клеток и понижать верхний порог частоты PIANO_SEMITONE_MAX
 
 const TICK_INTERVAL_MS = 25;
 const MAX_CONCURRENT_ENTITIES = 32;
 
-/**
- * Standard 88-key piano range A0…C8 (ISO 16:1975 concert pitch A4 = 440 Hz,
- * 12-tone equal temperament: f = 440 * 2^(n/12), n = semitones from A4).
- */
-const PIANO_SEMITONE_MIN = -48;
-const PIANO_SEMITONE_MAX = 24;
-
-function randomPaletteFrequency(): number {
-  const span = PIANO_SEMITONE_MAX - PIANO_SEMITONE_MIN + 1;
-  const n = PIANO_SEMITONE_MIN + Math.floor(Math.random() * span);
-  return 440 * 2 ** (n / 12);
-}
+const PIANO_SEMITONE_MIN = 21;
+const PIANO_SEMITONE_MAX = 108;
 
 export class Life implements LifeRegistry<LifeCell> {
   private readonly active = new Set<LifeCell>();
@@ -27,14 +16,18 @@ export class Life implements LifeRegistry<LifeCell> {
 
   constructor(private readonly player: HarmonicEntityPlayer) { }
 
-  /** @internal */
-  register(cell: LifeCell): void {
+  async register(cell: LifeCell): Promise<void> {
+    await this.player.push(cell.entity);
     this.active.add(cell);
   }
 
-  /** @internal */
-  unregister(cell: LifeCell): void {
+  async unregister(cell: LifeCell): Promise<void> {
     this.active.delete(cell);
+    await this.player.remove(cell.entity);
+  }
+
+  async update(cell: LifeCell): Promise<void> {
+    await this.player.apply(cell.entity);
   }
 
   getActiveCells(): ReadonlySet<LifeCell> {
@@ -62,29 +55,18 @@ export class Life implements LifeRegistry<LifeCell> {
 
     const peers = [...this.active];
 
-    const entity: HarmonicEntity = {
-      gain: Math.random() * (GAIN_MAX - GAIN_MIN) + GAIN_MIN,
-      //gain: GAIN_MIN,
-      frequency: randomPaletteFrequency(),
-      pan: Math.random() * 2 - 1,
-    };
+
     const cell = new LifeCell(
-      this.player,
       this,
-      entity,
+      Math.floor(Math.random() * (PIANO_SEMITONE_MAX - PIANO_SEMITONE_MIN + 1)) + PIANO_SEMITONE_MIN,
       Math.random() * (DURATION_MAX - DURATION_MIN) + DURATION_MIN,
-      Math.random());
+      Math.random(),
+      Math.random() * 2 - 1,
+    );
 
     for (const other of peers) {
       await cell.meet(other);
     }
-
-    // it is very bad idea to use nested loops here
-    // for (let i = 0; i < peers.length; i++) {
-    //   for (let j = i + 1; j < peers.length; j++) {
-    //     await peers[i].meet(peers[j]);
-    //   }
-    // }
 
     await cell.spawn();
   }
@@ -111,5 +93,4 @@ export class Life implements LifeRegistry<LifeCell> {
       this.timer = null;
     }
   }
-
 }

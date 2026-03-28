@@ -5,4 +5,5 @@
 export interface LifeRegistry<T> {
   register(cell: T): void;
   unregister(cell: T): void;
+  update(cell: T): void;
 }
