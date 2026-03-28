@@ -64,6 +64,7 @@ export class Life implements LifeRegistry<LifeCell> {
 
     const entity: HarmonicEntity = {
       gain: Math.random() * (GAIN_MAX - GAIN_MIN) + GAIN_MIN,
+      //gain: GAIN_MIN,
       frequency: randomPaletteFrequency(),
       pan: Math.random() * 2 - 1,
     };
