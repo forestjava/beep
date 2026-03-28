@@ -3,23 +3,20 @@ import type { HarmonicEntityPlayer } from "./HarmonicEntityPlayer";
 import { LifeCell, GAIN_MIN, GAIN_MAX, DURATION_MIN, DURATION_MAX } from "./LifeCell";
 import type { LifeRegistry } from "./LifeRegistry";
 
-const TICK_INTERVAL_MS = 40;
-// const INITIAL_LIFETIME = 250;
-// const INITIAL_GAIN = 0.01;
+const TICK_INTERVAL_MS = 25;
 const MAX_CONCURRENT_ENTITIES = 32;
 
 /**
  * Standard 88-key piano range A0…C8 (ISO 16:1975 concert pitch A4 = 440 Hz,
  * 12-tone equal temperament: f = 440 * 2^(n/12), n = semitones from A4).
  */
-const ISO16_A4_HZ = 440;
 const PIANO_SEMITONE_MIN = -48;
 const PIANO_SEMITONE_MAX = 24;
 
 function randomPaletteFrequency(): number {
   const span = PIANO_SEMITONE_MAX - PIANO_SEMITONE_MIN + 1;
   const n = PIANO_SEMITONE_MIN + Math.floor(Math.random() * span);
-  return ISO16_A4_HZ * 2 ** (n / 12);
+  return 440 * 2 ** (n / 12);
 }
 
 export class Life implements LifeRegistry<LifeCell> {
@@ -79,11 +76,12 @@ export class Life implements LifeRegistry<LifeCell> {
       await cell.meet(other);
     }
 
-    for (let i = 0; i < peers.length; i++) {
-      for (let j = i + 1; j < peers.length; j++) {
-        await peers[i].meet(peers[j]);
-      }
-    }
+    // it is very bad idea to use nested loops here
+    // for (let i = 0; i < peers.length; i++) {
+    //   for (let j = i + 1; j < peers.length; j++) {
+    //     await peers[i].meet(peers[j]);
+    //   }
+    // }
 
     await cell.spawn();
   }

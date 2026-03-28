@@ -7,18 +7,18 @@ export const GAIN_MIN = 0;
 export const GAIN_MAX = 0.1;
 
 export const DURATION_MIN = 0;
-export const DURATION_MAX = 1000;
+export const DURATION_MAX = 500;
 
 const CONSONANCE_CONSONANT_MIN = 0.6;
 const CONSONANCE_CONSONANT_MAX = 2;
 const CONSONANCE_DISSONANT_MAX = 0.4;
 const CONSONANCE_DISSONANT_MIN = 0.067;
 
-const INCREASE_GAIN_AFFECT = 1 / 16;
-const DECREASE_GAIN_AFFECT = 1 / 32;
+const INCREASE_GAIN_AFFECT = 1 / 50;
+const DECREASE_GAIN_AFFECT = 1 / 100;
 
-const INCREASE_DURATION_AFFECT = 1 / 16;
-const DECREASE_DURATION_AFFECT = 1 / 32;
+const INCREASE_DURATION_AFFECT = 1 / 50;
+const DECREASE_DURATION_AFFECT = 1 / 100;
 
 function clamp(x: number, lo: number, hi: number): number {
   return Math.min(hi, Math.max(lo, x));
