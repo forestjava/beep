@@ -84,6 +84,7 @@ export class HarmonicEntityPlayer {
     const t0 = this.audioContext.currentTime;
     const g = voice.gainNode.gain;
     g.cancelScheduledValues(t0);
+    g.setValueAtTime(g.value, t0);
     g.linearRampToValueAtTime(0, t0 + SMOOTH_TIME);
 
     await delay(SMOOTH_TIME + SLACK_TIME);
@@ -99,24 +100,33 @@ export class HarmonicEntityPlayer {
   }
 
   /** Push current {@link HarmonicEntity.gain}, {@link HarmonicEntity.frequency}, {@link HarmonicEntity.pan} into the graph. */
-  async apply(entity: HarmonicEntity): Promise<void> {
+  async apply(entity: HarmonicEntity, smoothTime = SMOOTH_TIME): Promise<void> {
     const voice = this.voices.get(entity);
     if (!voice) return;
 
     const t0 = this.audioContext.currentTime;
     const g = voice.gainNode.gain;
-    g.cancelScheduledValues(t0);
-    g.exponentialRampToValueAtTime(entity.gain, t0 + SMOOTH_TIME);
+    if (entity.gain !== g.value) {
+      g.cancelScheduledValues(t0);
+      g.setValueAtTime(g.value, t0);
+      g.linearRampToValueAtTime(entity.gain, t0 + smoothTime);
+    }
 
     const f = voice.oscillator.frequency;
-    f.cancelScheduledValues(t0);
-    f.exponentialRampToValueAtTime(entity.frequency, t0 + SMOOTH_TIME);
+    if (entity.frequency !== f.value) {
+      f.cancelScheduledValues(t0);
+      f.setValueAtTime(f.value, t0);
+      f.linearRampToValueAtTime(entity.frequency, t0 + smoothTime);
+    }
 
     const p = voice.panner.pan;
-    p.cancelScheduledValues(t0);
-    p.linearRampToValueAtTime(entity.pan, t0 + SMOOTH_TIME);
+    if (entity.pan !== p.value) {
+      p.cancelScheduledValues(t0);
+      p.setValueAtTime(p.value, t0);
+      p.linearRampToValueAtTime(entity.pan, t0 + smoothTime);
+    }
 
-    await delay(SMOOTH_TIME + SLACK_TIME);
+    await delay(smoothTime + SLACK_TIME);
   }
 
   /** Remove all voices and close the context. */

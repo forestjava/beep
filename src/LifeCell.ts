@@ -2,7 +2,7 @@ import type { HarmonicEntity } from "./HarmonicEntity";
 import type { LifeRegistry } from "./LifeRegistry";
 
 const GAIN_MIN = 0;
-const GAIN_MAX = 0.5;
+const GAIN_MAX = 1;
 
 function clamp(x: number, lo: number, hi: number): number {
   return Math.min(hi, Math.max(lo, x));
@@ -88,16 +88,18 @@ export class LifeCell {
     this.entity.frequency = midiToFrequency(this._midi);
     this.entity.gain = powerToGain(this._power);
     this.entity.pan = this._pan;
-    if (this.spawned) void this.lifecycle.update(this);
+    if (this.spawned) void this.lifecycle.update(this,);
   }
 
   public boost(boostWeight: number): void {
-    this.power *= boostWeight;
-    console.log("[LifeCell] boost", boostWeight, this.power);
+    this.power = boostWeight;
+    //this.duration = this.duration * (1 + boostWeight);
+    //console.log("[LifeCell] boost", boostWeight, this.power);
   }
 
   public penalty(penaltyWeight: number): void {
     this.power /= penaltyWeight;
+    //this.duration /= penaltyWeight;
     //console.log("[LifeCell] penalty", penaltyWeight, this.power);
   }
 

@@ -4,16 +4,16 @@ import { LifeCell } from "./LifeCell";
 import { getEntropy } from "./consonanse";
 import { randomEntropyIndex } from "./weights";
 
-const TICK_INTERVAL_MS = 600;
+const TICK_INTERVAL_MS = 400;
 const MAX_CONCURRENT_ENTITIES = 16;
 
-const ENTROPY_THRESHOLD = 25;
+const ENTROPY_THRESHOLD = 8;
 
-const DURATION_MS = 8000;
+const DURATION_MS = 6400;
 const DURATION_TICKS = DURATION_MS / TICK_INTERVAL_MS;
 
 const PIANO_SEMITONE_MIN = 21;
-const PIANO_SEMITONE_MAX = 84; //108;
+const PIANO_SEMITONE_MAX = 84;
 const PIANO_KEYS = PIANO_SEMITONE_MAX - PIANO_SEMITONE_MIN + 1;
 
 /**
@@ -21,7 +21,7 @@ const PIANO_KEYS = PIANO_SEMITONE_MAX - PIANO_SEMITONE_MIN + 1;
  * при raw = threshold — 0 (порог, буста нет); между ними линейно.
  */
 function consonantBoostWeight(raw: number): number {
-  return 1 + (ENTROPY_THRESHOLD - raw) / ENTROPY_THRESHOLD;
+  return (ENTROPY_THRESHOLD - raw) / ENTROPY_THRESHOLD;
 }
 
 /**
@@ -93,9 +93,9 @@ export class Life implements LifeRegistry<LifeCell> {
 
     const cell = new LifeCell(
       this,
-      this.pickNextSpawnMidi(),
+      this.pickNextSpawnMidi(), //PIANO_SEMITONE_MIN + Math.floor(Math.random() * PIANO_KEYS), //
       Math.random() * DURATION_TICKS,
-      Math.random(),
+      0,
       Math.random() * 2 - 1,
     );
 
@@ -138,8 +138,8 @@ export class Life implements LifeRegistry<LifeCell> {
         if (team.includes(peer)) {
           peer.boost(consonantBoostWeight(teamEntropy));
         } else {
-          const xEntropy = getEntropy(peer.midi, ...team.map((t) => t.midi));
-          peer.penalty(dissonantPenaltyWeight(xEntropy));
+          // const xEntropy = getEntropy(peer.midi, ...team.map((t) => t.midi));
+          // peer.penalty(dissonantPenaltyWeight(xEntropy));
         }
       }
 
