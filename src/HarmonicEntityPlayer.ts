@@ -50,7 +50,7 @@ export class HarmonicEntityPlayer {
     void this.audioContext.resume();
 
     const t0 = this.audioContext.currentTime;
-    const gainNode = new GainNode(this.audioContext, { gain: 0 });
+    const gainNode = new GainNode(this.audioContext);
     gainNode.gain.setValueAtTime(0, t0);
     gainNode.gain.linearRampToValueAtTime(
       entity.gain,
@@ -84,7 +84,6 @@ export class HarmonicEntityPlayer {
     const t0 = this.audioContext.currentTime;
     const g = voice.gainNode.gain;
     g.cancelScheduledValues(t0);
-    g.setValueAtTime(g.value, t0);
     g.linearRampToValueAtTime(0, t0 + SMOOTH_TIME);
 
     await delay(SMOOTH_TIME + SLACK_TIME);
@@ -107,17 +106,14 @@ export class HarmonicEntityPlayer {
     const t0 = this.audioContext.currentTime;
     const g = voice.gainNode.gain;
     g.cancelScheduledValues(t0);
-    g.setValueAtTime(g.value, t0);
-    g.linearRampToValueAtTime(entity.gain, t0 + SMOOTH_TIME);
+    g.exponentialRampToValueAtTime(entity.gain, t0 + SMOOTH_TIME);
 
     const f = voice.oscillator.frequency;
     f.cancelScheduledValues(t0);
-    f.setValueAtTime(f.value, t0);
-    f.linearRampToValueAtTime(entity.frequency, t0 + SMOOTH_TIME);
+    f.exponentialRampToValueAtTime(entity.frequency, t0 + SMOOTH_TIME);
 
     const p = voice.panner.pan;
     p.cancelScheduledValues(t0);
-    p.setValueAtTime(p.value, t0);
     p.linearRampToValueAtTime(entity.pan, t0 + SMOOTH_TIME);
 
     await delay(SMOOTH_TIME + SLACK_TIME);

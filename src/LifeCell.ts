@@ -92,7 +92,7 @@ export class LifeCell {
   }
 
   public boost(boostWeight: number): void {
-    this.power += boostWeight;
+    this.power *= boostWeight;
     console.log("[LifeCell] boost", boostWeight, this.power);
   }
 

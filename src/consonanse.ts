@@ -1,4 +1,3 @@
-import type { LifeCell } from "./LifeCell";
 import type { JI } from "./jiFromMidi";
 import { jiFromMidi } from "./jiFromMidi";
 
@@ -19,17 +18,14 @@ function tenneyProductFromRoot(rootMidi: number, otherMidis: readonly number[]):
 }
 
 /**
- * JI / Tenney-метрика для двух и более клеток: аккордная последовательность —
- * клетки по возрастанию MIDI; корень — sequence[0], сумма Tenney по интервалам
- * от корня к остальным (карта как в ji_matrix_midi_21_108.js).
+ * JI / Tenney-метрика для двух и более MIDI: корень — первый аргумент,
+ * сумма Tenney по интервалам от корня к остальным (карта как в ji_matrix_midi_21_108.js).
  */
-export function getEntropy(...cells: LifeCell[]): number {
-  const n = cells.length;
+export function getEntropy(...midis: number[]): number {
+  const n = midis.length;
   if (n < 2) {
-    throw new Error(`getEntropy: expected at least 2 cells, got ${n}`);
+    throw new Error(`getEntropy: expected at least 2 MIDI values, got ${n}`);
   }
-  const sequence = [...cells]; //.sort((a, b) => a.midi - b.midi);
-  const root = sequence[0]!.midi;
-  const otherMidis = sequence.slice(1).map((c) => c.midi);
-  return tenneyProductFromRoot(root, otherMidis);
+  const root = midis[0]!;
+  return tenneyProductFromRoot(root, midis.slice(1));
 }

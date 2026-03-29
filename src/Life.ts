@@ -1,9 +1,10 @@
 import type { LifeRegistry } from "./LifeRegistry";
 import type { HarmonicEntityPlayer } from "./HarmonicEntityPlayer";
-import { getEntropy } from "./consonanse";
 import { LifeCell } from "./LifeCell";
+import { getEntropy } from "./consonanse";
+import { randomEntropyIndex } from "./weights";
 
-const TICK_INTERVAL_MS = 400;
+const TICK_INTERVAL_MS = 600;
 const MAX_CONCURRENT_ENTITIES = 16;
 
 const ENTROPY_THRESHOLD = 25;
@@ -12,14 +13,15 @@ const DURATION_MS = 8000;
 const DURATION_TICKS = DURATION_MS / TICK_INTERVAL_MS;
 
 const PIANO_SEMITONE_MIN = 21;
-const PIANO_SEMITONE_MAX = 96; //108;
+const PIANO_SEMITONE_MAX = 84; //108;
+const PIANO_KEYS = PIANO_SEMITONE_MAX - PIANO_SEMITONE_MIN + 1;
 
 /**
  * Tenney: меньше raw → консонантнее. При raw = 0 вес 2 (максимальный буст);
  * при raw = threshold — 0 (порог, буста нет); между ними линейно.
  */
 function consonantBoostWeight(raw: number): number {
-  return (ENTROPY_THRESHOLD - raw) / ENTROPY_THRESHOLD;
+  return 1 + (ENTROPY_THRESHOLD - raw) / ENTROPY_THRESHOLD;
 }
 
 /**
@@ -33,6 +35,8 @@ function dissonantPenaltyWeight(raw: number): number {
 export class Life implements LifeRegistry<LifeCell> {
   private readonly active = new Set<LifeCell>();
   private timer: ReturnType<typeof setInterval> | null = null;
+  /** Предыдущая выбранная MIDI при спавне; первая нота равномерно случайная, далее — по энтропии. */
+  private currentKey: number | null = null;
 
   constructor(private readonly player: HarmonicEntityPlayer) { }
 
@@ -50,16 +54,28 @@ export class Life implements LifeRegistry<LifeCell> {
     await this.player.apply(cell.entity);
   }
 
-  getActiveCells(): ReadonlySet<LifeCell> {
-    return this.active;
-  }
-
   private pickWeakestCell(): LifeCell | undefined {
     let best: LifeCell | undefined;
     for (const c of this.active) {
       if (!best || c.power <= best.power) best = c;
     }
     return best;
+  }
+
+  /** Первая нота — равномерно по диапазону клавиш; далее — взвешенный выбор через {@link randomEntropyIndex} относительно предыдущей. */
+  private pickNextSpawnMidi(): number {
+    let key: number;
+    if (this.currentKey === null) {
+      key = PIANO_SEMITONE_MIN + Math.floor(Math.random() * PIANO_KEYS);
+    } else {
+      const entropies = new Array<number>(PIANO_KEYS);
+      for (let i = 0; i < PIANO_KEYS; i++) {
+        entropies[i] = getEntropy(this.currentKey, PIANO_SEMITONE_MIN + i);
+      }
+      key = PIANO_SEMITONE_MIN + randomEntropyIndex(entropies);
+    }
+    this.currentKey = key;
+    return key;
   }
 
   /**
@@ -77,9 +93,9 @@ export class Life implements LifeRegistry<LifeCell> {
 
     const cell = new LifeCell(
       this,
-      Math.floor(Math.random() * (PIANO_SEMITONE_MAX - PIANO_SEMITONE_MIN + 1)) + PIANO_SEMITONE_MIN,
+      this.pickNextSpawnMidi(),
       Math.random() * DURATION_TICKS,
-      0,
+      Math.random(),
       Math.random() * 2 - 1,
     );
 
@@ -88,7 +104,7 @@ export class Life implements LifeRegistry<LifeCell> {
       return
     };
 
-    const sorted = peers.sort((a, b) => getEntropy(cell, a) - getEntropy(cell, b));
+    const sorted = peers.sort((a, b) => getEntropy(cell.midi, a.midi) - getEntropy(cell.midi, b.midi));
     const team: LifeCell[] = [];
 
     const steps: Array<{
@@ -97,7 +113,7 @@ export class Life implements LifeRegistry<LifeCell> {
     }> = [];
 
     for (const peer of sorted) {
-      const chordEntropy = getEntropy(cell, ...team, peer);
+      const chordEntropy = getEntropy(cell.midi, ...team.map((t) => t.midi), peer.midi);
       const accepted = chordEntropy < ENTROPY_THRESHOLD;
       steps.push({
         chordEntropy,
@@ -122,7 +138,7 @@ export class Life implements LifeRegistry<LifeCell> {
         if (team.includes(peer)) {
           peer.boost(consonantBoostWeight(teamEntropy));
         } else {
-          const xEntropy = getEntropy(peer, ...team);
+          const xEntropy = getEntropy(peer.midi, ...team.map((t) => t.midi));
           peer.penalty(dissonantPenaltyWeight(xEntropy));
         }
       }
