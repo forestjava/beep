@@ -12,7 +12,7 @@ const DURATION_MS = 8000;
 const DURATION_TICKS = DURATION_MS / TICK_INTERVAL_MS;
 
 const PIANO_SEMITONE_MIN = 21;
-const PIANO_SEMITONE_MAX = 78; //108;
+const PIANO_SEMITONE_MAX = 96; //108;
 
 /**
  * Tenney: меньше raw → консонантнее. При raw = 0 вес 2 (максимальный буст);
