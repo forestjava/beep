@@ -1,17 +1,34 @@
-import type { HarmonicEntityPlayer } from "./HarmonicEntityPlayer";
-import { LifeCell, DURATION_MIN, DURATION_MAX } from "./LifeCell";
 import type { LifeRegistry } from "./LifeRegistry";
+import type { HarmonicEntityPlayer } from "./HarmonicEntityPlayer";
+import { getEntropy } from "./consonanse";
+import { LifeCell } from "./LifeCell";
 
-// было бы забавно с течением игры увеличивать интервал интервенции, уменьшать максимальное количество клеток и понижать верхний порог частоты PIANO_SEMITONE_MAX
-
-const TICK_INTERVAL_MS = 1000;
+const TICK_INTERVAL_MS = 400;
 const MAX_CONCURRENT_ENTITIES = 16;
 
-const PIANO_SEMITONE_MIN = 21;
-const PIANO_SEMITONE_MAX = 108;
+const ENTROPY_THRESHOLD = 30;
 
-/** Временно: только C / F / G в трёх октавах (эксперимент). */
-const EXPERIMENT_MIDI_NOTES = [48, 53, 55, 60, 65, 67, 72, 77, 79] as const;
+const DURATION_MS = 8000;
+const DURATION_TICKS = DURATION_MS / TICK_INTERVAL_MS;
+
+const PIANO_SEMITONE_MIN = 21;
+const PIANO_SEMITONE_MAX = 78; //108;
+
+/**
+ * Tenney: меньше raw → консонантнее. При raw = 0 вес 2 (максимальный буст);
+ * при raw = threshold — 0 (порог, буста нет); между ними линейно.
+ */
+function consonantBoostWeight(raw: number): number {
+  return 1 + (ENTROPY_THRESHOLD - raw) / ENTROPY_THRESHOLD;
+}
+
+/**
+ * Tenney: ожидается raw > threshold. Возвращает raw/threshold — во сколько раз энтропия выше порога
+ * (множитель силы штрафа: чем дальше за порогом, тем сильнее).
+ */
+function dissonantPenaltyWeight(raw: number): number {
+  return raw / ENTROPY_THRESHOLD;
+}
 
 export class Life implements LifeRegistry<LifeCell> {
   private readonly active = new Set<LifeCell>();
@@ -58,21 +75,60 @@ export class Life implements LifeRegistry<LifeCell> {
 
     const peers = [...this.active];
 
-
     const cell = new LifeCell(
       this,
-      //EXPERIMENT_MIDI_NOTES[Math.floor(Math.random() * EXPERIMENT_MIDI_NOTES.length)]!,
       Math.floor(Math.random() * (PIANO_SEMITONE_MAX - PIANO_SEMITONE_MIN + 1)) + PIANO_SEMITONE_MIN,
-      Math.random() * (DURATION_MAX - DURATION_MIN) + DURATION_MIN,
+      Math.random() * DURATION_TICKS,
       Math.random(),
       Math.random() * 2 - 1,
     );
 
-    for (const other of peers) {
-      await cell.meet(other);
+    if (peers.length == 0) {
+      await cell.spawn();
+      return
+    };
+
+    const sorted = peers.sort((a, b) => getEntropy(cell, a) - getEntropy(cell, b));
+    const team: LifeCell[] = [];
+
+    const steps: Array<{
+      chordEntropy: number;
+      accepted: boolean;
+    }> = [];
+
+    for (const peer of sorted) {
+      const chordEntropy = getEntropy(cell, ...team, peer);
+      const accepted = chordEntropy < ENTROPY_THRESHOLD;
+      steps.push({
+        chordEntropy,
+        accepted,
+      });
+      if (accepted) team.push(peer);
+      else break;
     }
 
-    await cell.spawn();
+    const hasFriends = steps.filter((s) => s.accepted).length > 0;
+    if (hasFriends) {
+      const acceptedIndex = steps.filter((s) => s.accepted).length - 1;
+      const teamEntropy = steps[acceptedIndex].chordEntropy;
+
+      console.log("[Life] team", {
+        teamSize: team.length,
+        teamEntropy: teamEntropy.toFixed(4),
+      });
+
+      team.push(cell);
+      for (const peer of peers) {
+        if (team.includes(peer)) {
+          peer.boost(consonantBoostWeight(teamEntropy));
+        } else {
+          const xEntropy = getEntropy(peer, ...team);
+          peer.penalty(dissonantPenaltyWeight(xEntropy));
+        }
+      }
+
+      await cell.spawn();
+    }
   }
 
   /**

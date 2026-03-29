@@ -1,6 +1,7 @@
-// Логика как в ji_matrix_midi_21_108.js: 12-TET шаги → JI [n, d] с октавами.
+export type JI = readonly [n: number, d: number];
 
-const semitoneToJI: Record<number, [number, number]> = {
+// Логика как в ji_matrix_midi_21_108.js: 12-TET шаги → JI [n, d] с октавами.
+const semitoneToJI: Record<number, JI> = {
   0: [1, 1],
   1: [16, 15],
   2: [9, 8],
@@ -22,13 +23,13 @@ function gcd(a: number, b: number): number {
   return x;
 }
 
-function normalizeRatio(n: number, d: number): [number, number] {
+function normalizeRatio(n: number, d: number): JI {
   const g = gcd(n, d);
   return [n / g, d / g];
 }
 
 /** JI-интервал между двумя MIDI-нотами (как в ji_matrix_midi_21_108.js). */
-export function jiFromMidi(midi1: number, midi2: number): [number, number] {
+export function jiFromMidi(midi1: number, midi2: number): JI {
   const semitones = midi2 - midi1;
   const absSemi = Math.abs(semitones);
   const octaves = Math.floor(absSemi / 12);
