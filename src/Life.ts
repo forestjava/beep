@@ -4,11 +4,14 @@ import type { LifeRegistry } from "./LifeRegistry";
 
 // было бы забавно с течением игры увеличивать интервал интервенции, уменьшать максимальное количество клеток и понижать верхний порог частоты PIANO_SEMITONE_MAX
 
-const TICK_INTERVAL_MS = 25;
-const MAX_CONCURRENT_ENTITIES = 32;
+const TICK_INTERVAL_MS = 1000;
+const MAX_CONCURRENT_ENTITIES = 16;
 
 const PIANO_SEMITONE_MIN = 21;
 const PIANO_SEMITONE_MAX = 108;
+
+/** Временно: только C / F / G в трёх октавах (эксперимент). */
+const EXPERIMENT_MIDI_NOTES = [48, 53, 55, 60, 65, 67, 72, 77, 79] as const;
 
 export class Life implements LifeRegistry<LifeCell> {
   private readonly active = new Set<LifeCell>();
@@ -37,7 +40,7 @@ export class Life implements LifeRegistry<LifeCell> {
   private pickWeakestCell(): LifeCell | undefined {
     let best: LifeCell | undefined;
     for (const c of this.active) {
-      if (!best || c.getPower() <= best.getPower()) best = c;
+      if (!best || c.power <= best.power) best = c;
     }
     return best;
   }
@@ -58,6 +61,7 @@ export class Life implements LifeRegistry<LifeCell> {
 
     const cell = new LifeCell(
       this,
+      //EXPERIMENT_MIDI_NOTES[Math.floor(Math.random() * EXPERIMENT_MIDI_NOTES.length)]!,
       Math.floor(Math.random() * (PIANO_SEMITONE_MAX - PIANO_SEMITONE_MIN + 1)) + PIANO_SEMITONE_MIN,
       Math.random() * (DURATION_MAX - DURATION_MIN) + DURATION_MIN,
       Math.random(),
