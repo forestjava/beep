@@ -92,8 +92,8 @@ export class LifeCell {
   }
 
   public boost(boostWeight: number): void {
-    this.power *= boostWeight;
-    //console.log("[LifeCell] boost", boostWeight, this.power);
+    this.power += boostWeight;
+    console.log("[LifeCell] boost", boostWeight, this.power);
   }
 
   public penalty(penaltyWeight: number): void {

@@ -6,7 +6,7 @@ import { LifeCell } from "./LifeCell";
 const TICK_INTERVAL_MS = 400;
 const MAX_CONCURRENT_ENTITIES = 16;
 
-const ENTROPY_THRESHOLD = 30;
+const ENTROPY_THRESHOLD = 25;
 
 const DURATION_MS = 8000;
 const DURATION_TICKS = DURATION_MS / TICK_INTERVAL_MS;
@@ -19,7 +19,7 @@ const PIANO_SEMITONE_MAX = 96; //108;
  * при raw = threshold — 0 (порог, буста нет); между ними линейно.
  */
 function consonantBoostWeight(raw: number): number {
-  return 1 + (ENTROPY_THRESHOLD - raw) / ENTROPY_THRESHOLD;
+  return (ENTROPY_THRESHOLD - raw) / ENTROPY_THRESHOLD;
 }
 
 /**
@@ -79,7 +79,7 @@ export class Life implements LifeRegistry<LifeCell> {
       this,
       Math.floor(Math.random() * (PIANO_SEMITONE_MAX - PIANO_SEMITONE_MIN + 1)) + PIANO_SEMITONE_MIN,
       Math.random() * DURATION_TICKS,
-      Math.random(),
+      0,
       Math.random() * 2 - 1,
     );
 
