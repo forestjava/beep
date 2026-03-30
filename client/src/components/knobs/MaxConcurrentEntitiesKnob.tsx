@@ -1,10 +1,25 @@
+import { useState } from "react";
 import { RotaryKnob } from "../RotaryKnob";
+import { beepPlayer } from "../../playerSingleton";
+import { formatKnobReadout } from "./formatKnobReadout";
 
-export type MaxConcurrentEntitiesKnobProps = {
-  value: number;
-  onChange: (value: number) => void;
-};
+const MIN = 0;
 
-export function MaxConcurrentEntitiesKnob(props: MaxConcurrentEntitiesKnobProps) {
-  return <RotaryKnob label="MAX_CONCURRENT_ENTITIES" {...props} />;
+export function MaxConcurrentEntitiesKnob() {
+  const [value, setValue] = useState(0);
+
+  return (
+    <div className="knob-row">
+      <label className="knob-label">MAX_CONCURRENT_ENTITIES</label>
+      <RotaryKnob
+        value={value}
+        onChange={(v) => {
+          setValue(v);
+          beepPlayer.setMaxConcurrentEntities(v);
+        }}
+        min={MIN}
+      />
+      <output className="knob-value">{formatKnobReadout(value)}</output>
+    </div>
+  );
 }

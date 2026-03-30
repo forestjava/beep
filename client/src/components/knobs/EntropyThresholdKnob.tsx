@@ -1,10 +1,22 @@
+import { useState } from "react";
 import { RotaryKnob } from "../RotaryKnob";
+import { beepPlayer } from "../../playerSingleton";
+import { formatKnobReadout } from "./formatKnobReadout";
 
-export type EntropyThresholdKnobProps = {
-  value: number;
-  onChange: (value: number) => void;
-};
+export function EntropyThresholdKnob() {
+  const [value, setValue] = useState(0);
 
-export function EntropyThresholdKnob(props: EntropyThresholdKnobProps) {
-  return <RotaryKnob label="ENTROPY_THRESHOLD" {...props} />;
+  return (
+    <div className="knob-row">
+      <label className="knob-label">ENTROPY_THRESHOLD</label>
+      <RotaryKnob
+        value={value}
+        onChange={(v) => {
+          setValue(v);
+          beepPlayer.setEntropyThreshold(v);
+        }}
+      />
+      <output className="knob-value">{formatKnobReadout(value)}</output>
+    </div>
+  );
 }

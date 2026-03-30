@@ -1,10 +1,4 @@
-export { TickIntervalKnob, type TickIntervalKnobProps } from "./TickIntervalKnob";
-export {
-  MaxConcurrentEntitiesKnob,
-  type MaxConcurrentEntitiesKnobProps,
-} from "./MaxConcurrentEntitiesKnob";
-export {
-  EntropyThresholdKnob,
-  type EntropyThresholdKnobProps,
-} from "./EntropyThresholdKnob";
-export { DurationKnob, type DurationKnobProps } from "./DurationKnob";
+export { TickIntervalKnob, TICK_INTERVAL_SCALE } from "./TickIntervalKnob";
+export { MaxConcurrentEntitiesKnob } from "./MaxConcurrentEntitiesKnob";
+export { EntropyThresholdKnob } from "./EntropyThresholdKnob";
+export { DurationKnob } from "./DurationKnob";

@@ -18,7 +18,7 @@ const CATCH_UP_RATE = 10;
 /** Квадрат расстояния до центра, ниже которого направление не определено. */
 const CENTER_EPS2 = 4;
 
-/** Порог совпадения сглаженного значения с целью. */
+/** Порог совпадения сглаженного значения с целью и для дедупа onChange. */
 const VALUE_EPS = 1e-4;
 
 /** Параметры визуального циферблата. */
@@ -40,6 +40,17 @@ function readCenter(el: HTMLElement): DragCenter {
 
 function normTurn(t: number): number {
   return ((t % 1) + 1) % 1;
+}
+
+function clampToBounds(
+  v: number,
+  min: number | undefined,
+  max: number | undefined
+): number {
+  let x = v;
+  if (min !== undefined && x < min) x = min;
+  if (max !== undefined && x > max) x = max;
+  return x;
 }
 
 /**
@@ -73,8 +84,8 @@ function needleRotationDeg(unwrappedValue: number): number {
 
 /* ---------- Визуальная часть («фейс» ручки) ---------- */
 
-function Face(props: { rotationDeg: number }) {
-  const sid = useId().replace(/:/g, "");
+function Face(props: { rotationDeg: number; gradientSuffix: string }) {
+  const sid = props.gradientSuffix;
   const ticks = Array.from({ length: 12 }, (_, i) => ({
     i,
     a: -90 + i * 30, // 12 делений по кругу, 0° = 12 часов
@@ -82,7 +93,7 @@ function Face(props: { rotationDeg: number }) {
   }));
 
   return (
-    <svg className="audio-knob-svg" viewBox="0 0 96 96" aria-hidden>
+    <svg className="audio-knob-svg" viewBox="0 0 96 96">
       <defs>
         <radialGradient id={`kf${sid}`} cx="35%" cy="30%" r="70%">
           <stop offset="0%" stopColor="#5a5a6a" />
@@ -164,38 +175,37 @@ function Face(props: { rotationDeg: number }) {
   );
 }
 
-/*
- * Базовая крутилка: внутри везде одно число — как `value` / onChange (развёрнутое).
- * Угол стрелки на SVG = needleRotationDeg(value); геометрия указателя даёт только [0,1) → unwrapFractionNear.
- */
-/* ---------- Публичный примитив (обёртки в `./knobs/`) ---------- */
-
 export type RotaryKnobProps = {
-  label: string;
-  /** Развёрнутое число (целые витки + дробь); смысл задаёт обёртка / родитель. */
   value: number;
   onChange: (value: number) => void;
+  min?: number;
+  max?: number;
 };
 
-function fmt(u: number): string {
-  const r = Math.round(u * 10) / 10;
-  return Number.isInteger(r) ? String(r) : r.toFixed(1);
-}
-
 export function RotaryKnob(props: RotaryKnobProps) {
-  const { label, value, onChange } = props;
+  const { value, onChange, min, max } = props;
+  const gradientSuffix = useId().replace(/:/g, "");
 
-  const id = useId();
   const rootRef = useRef<HTMLDivElement | null>(null);
+  const minRef = useRef(min);
+  const maxRef = useRef(max);
+  minRef.current = min;
+  maxRef.current = max;
 
   /** Центр на pointerdown — направление считается от него к clientX/Y. */
   const dragCenterRef = useRef<DragCenter | null>(null);
   /** Ссылка на `end` этой сессии — для сравнения с `knobDragEnd` при размонтировании. */
   const sessionEndRef = useRef<(() => void) | null>(null);
 
-  /** Сглаживаемое и целевое значение — тот же смысл, что у пропа `value` (развёрнутое). */
-  const targetRef = useRef(0);
-  const displayRef = useRef(0);
+  /**
+   * Угол/значение, заданное указателем (без min/max). Может уходить за пределы —
+   * иначе «догонка» никогда не подводит intention к границе, пока курсор уже за шкалой.
+   */
+  const dragTargetRef = useRef(0);
+  /** Сглаженное значение к drag; после шага приводится к [min, max] — как у пропа `value`. */
+  const intentionRef = useRef(0);
+  /** Последнее значение, отправленное в onChange (дедуп при том же clamped). */
+  const lastEmittedRef = useRef(0);
   const rafIdRef = useRef(0);
   const lastTickTsRef = useRef<number | undefined>(undefined);
   /** Локальная анимация / перетаскивание — не перетирать из пропа. */
@@ -227,23 +237,38 @@ export function RotaryKnob(props: RotaryKnobProps) {
       const dt = Math.min(0.05, (now - last) / 1000);
       lastTickTsRef.current = now;
 
-      const target = targetRef.current;
-      let display = displayRef.current;
-      const delta = target - display;
+      const dragTarget = dragTargetRef.current;
+      let intention = intentionRef.current;
+      const delta = dragTarget - intention;
       if (Math.abs(delta) < VALUE_EPS) {
-        display = target;
+        intention = dragTarget;
       } else {
         const alpha = 1 - Math.exp(-CATCH_UP_RATE * dt);
-        display = display + delta * alpha;
+        intention = intention + delta * alpha;
       }
-      displayRef.current = display;
+      intention = clampToBounds(intention, minRef.current, maxRef.current);
+      intentionRef.current = intention;
 
-      onChangeRef.current(display);
-      setNeedleDeg(needleRotationDeg(display));
+      if (Math.abs(intention - lastEmittedRef.current) > VALUE_EPS) {
+        lastEmittedRef.current = intention;
+        onChangeRef.current(intention);
+      }
+      setNeedleDeg(needleRotationDeg(intention));
+
+      const min = minRef.current;
+      const max = maxRef.current;
+      const atMax = max !== undefined && intention >= max - VALUE_EPS;
+      const atMin = min !== undefined && intention <= min + VALUE_EPS;
+      const stuckPastMax = max !== undefined && atMax && dragTarget >= max;
+      const stuckPastMin = min !== undefined && atMin && dragTarget <= min;
+      const caughtUp =
+        Math.abs(dragTarget - intention) < VALUE_EPS ||
+        stuckPastMax ||
+        stuckPastMin;
 
       const dragging = dragCenterRef.current !== null;
-      const chasing = Math.abs(targetRef.current - display) > VALUE_EPS;
-      if (dragging || chasing) {
+      // Пока жест активен, крутим RAF (как раньше), иначе после «упора» сбросим driving и примем value снаружи.
+      if (!caughtUp || dragging) {
         rafIdRef.current = requestAnimationFrame(tick);
       } else {
         rafIdRef.current = 0;
@@ -254,25 +279,28 @@ export function RotaryKnob(props: RotaryKnobProps) {
     rafIdRef.current = requestAnimationFrame(tick);
   }, []);
 
-  const setTargetFromPointer = useCallback(
+  /** Обновляет только drag-цель по указателю; onChange и clamp — в RAF (intention). */
+  const setDragTargetFromPointer = useCallback(
     (cx: number, cy: number, clientX: number, clientY: number) => {
       const frac = pointerFraction(cx, cy, clientX, clientY);
       if (frac === null) return;
-      targetRef.current = unwrapFractionNear(targetRef.current, frac);
+      dragTargetRef.current = unwrapFractionNear(dragTargetRef.current, frac);
     },
     []
   );
 
-  const setTargetFromPointerRef = useRef(setTargetFromPointer);
-  setTargetFromPointerRef.current = setTargetFromPointer;
+  const setDragTargetFromPointerRef = useRef(setDragTargetFromPointer);
+  setDragTargetFromPointerRef.current = setDragTargetFromPointer;
 
-  // снаружи поменяли value
+  // снаружи поменяли value / границы
   useLayoutEffect(() => {
     if (drivingRef.current) return;
-    displayRef.current = value;
-    targetRef.current = value;
-    setNeedleDeg(needleRotationDeg(value));
-  }, [value]);
+    const v = clampToBounds(value, min, max);
+    intentionRef.current = v;
+    dragTargetRef.current = v;
+    lastEmittedRef.current = v;
+    setNeedleDeg(needleRotationDeg(v));
+  }, [value, min, max]);
 
   useLayoutEffect(
     () => () => {
@@ -289,19 +317,21 @@ export function RotaryKnob(props: RotaryKnobProps) {
     if (!el) return;
 
     drivingRef.current = true;
-    displayRef.current = value;
-    targetRef.current = value;
+    const v0 = clampToBounds(value, min, max);
+    intentionRef.current = v0;
+    dragTargetRef.current = v0;
+    lastEmittedRef.current = v0;
 
     dragCenterRef.current = readCenter(el);
     const { cx, cy } = dragCenterRef.current;
-    setTargetFromPointerRef.current(cx, cy, e.clientX, e.clientY);
+    setDragTargetFromPointerRef.current(cx, cy, e.clientX, e.clientY);
     scheduleCatchUp();
 
     const onWinMove = (ev: Event) => {
       const c = dragCenterRef.current;
       if (!c) return;
       const m = ev as MouseEvent;
-      setTargetFromPointerRef.current(c.cx, c.cy, m.clientX, m.clientY);
+      setDragTargetFromPointerRef.current(c.cx, c.cy, m.clientX, m.clientY);
       scheduleCatchUp();
     };
 
@@ -324,25 +354,12 @@ export function RotaryKnob(props: RotaryKnobProps) {
   };
 
   return (
-    <div className="knob-row">
-      <label className="knob-label" htmlFor={id}>
-        {label}
-      </label>
-      <div
-        id={id}
-        ref={rootRef}
-        className="audio-knob-hit"
-        role="slider"
-        aria-label={label}
-        aria-valuenow={Math.round(value * 100) / 100}
-        tabIndex={0}
-        onPointerDown={handlePointerDown}
-      >
-        <Face rotationDeg={needleDeg} />
-      </div>
-      <output className="knob-value" htmlFor={id}>
-        {fmt(value)}
-      </output>
+    <div
+      ref={rootRef}
+      className="audio-knob-hit"
+      onPointerDown={handlePointerDown}
+    >
+      <Face rotationDeg={needleDeg} gradientSuffix={gradientSuffix} />
     </div>
   );
 }

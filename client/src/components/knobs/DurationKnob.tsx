@@ -1,10 +1,22 @@
+import { useState } from "react";
 import { RotaryKnob } from "../RotaryKnob";
+import { beepPlayer } from "../../playerSingleton";
+import { formatKnobReadout } from "./formatKnobReadout";
 
-export type DurationKnobProps = {
-  value: number;
-  onChange: (value: number) => void;
-};
+export function DurationKnob() {
+  const [value, setValue] = useState(0);
 
-export function DurationKnob(props: DurationKnobProps) {
-  return <RotaryKnob label="DURATION" {...props} />;
+  return (
+    <div className="knob-row">
+      <label className="knob-label">DURATION</label>
+      <RotaryKnob
+        value={value}
+        onChange={(v) => {
+          setValue(v);
+          beepPlayer.setDuration(v);
+        }}
+      />
+      <output className="knob-value">{formatKnobReadout(value)}</output>
+    </div>
+  );
 }

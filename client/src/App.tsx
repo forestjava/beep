@@ -16,23 +16,11 @@ import { beepPlayer } from './playerSingleton'
 export default function App() {
   const p = beepPlayer
 
-  const [tick, setTick] = useState(0)
-  const [entities, setEntities] = useState(0)
-  const [entropy, setEntropy] = useState(0)
-  const [duration, setDuration] = useState(0)
   const [pianoRange, setPianoRange] = useState<[number, number]>([
     PIANO_SEMITONE_MIN,
     PIANO_SEMITONE_MAX,
   ])
   const [playing, setPlaying] = useState(false)
-
-  const bind = useCallback(
-    (setter: (n: number) => void, log: (n: number) => void) => (v: number) => {
-      setter(v)
-      log(v)
-    },
-    [],
-  )
 
   const onPianoChange = useCallback(
     (range: [number, number]) => {
@@ -54,22 +42,10 @@ export default function App() {
     <div className="app-shell">
       <h1 className="app-title">Beep</h1>
 
-      <TickIntervalKnob
-        value={tick}
-        onChange={bind(setTick, p.setTickInterval.bind(p))}
-      />
-      <MaxConcurrentEntitiesKnob
-        value={entities}
-        onChange={bind(setEntities, p.setMaxConcurrentEntities.bind(p))}
-      />
-      <EntropyThresholdKnob
-        value={entropy}
-        onChange={bind(setEntropy, p.setEntropyThreshold.bind(p))}
-      />
-      <DurationKnob
-        value={duration}
-        onChange={bind(setDuration, p.setDuration.bind(p))}
-      />
+      <TickIntervalKnob />
+      <MaxConcurrentEntitiesKnob />
+      <EntropyThresholdKnob />
+      <DurationKnob />
 
       <div className="piano-block">
         <div className="piano-head">
