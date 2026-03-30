@@ -4,12 +4,14 @@ import { LifeCell } from "./LifeCell";
 import { getEntropy } from "./consonanse";
 import { randomEntropyIndex } from "./weights";
 
-const TICK_INTERVAL_MS = 400;
+const TICK_INTERVAL_MS = 200;
 const MAX_CONCURRENT_ENTITIES = 16;
 
-const ENTROPY_THRESHOLD = 8;
+/** Benedetti: порог в произведении n·d; при Tenney было 8 (= log₂ этого), т.е. 2**8. */
+const ENTROPY_THRESHOLD = 256;
+// const ENTROPY_THRESHOLD = 8; // Tenney: Σ log₂(n·d)
 
-const DURATION_MS = 6400;
+const DURATION_MS = 3200;
 const DURATION_TICKS = DURATION_MS / TICK_INTERVAL_MS;
 
 const PIANO_SEMITONE_MIN = 21;
@@ -17,16 +19,17 @@ const PIANO_SEMITONE_MAX = 84;
 const PIANO_KEYS = PIANO_SEMITONE_MAX - PIANO_SEMITONE_MIN + 1;
 
 /**
- * Tenney: меньше raw → консонантнее. При raw = 0 максимальный буст;
+ * Benedetti (произведение n·d): меньше raw → консонантнее. При raw = 0 максимальный буст;
  * при raw = threshold — 0 (порог, буста нет); между ними линейно.
+ * (Для Tenney тот же вид формулы, но raw был в log₂-шкале и порог был меньше.)
  */
 function consonantBoostWeight(raw: number): number {
   return (ENTROPY_THRESHOLD - raw) / ENTROPY_THRESHOLD;
 }
 
 /**
- * Tenney: ожидается raw > threshold. Возвращает raw/threshold — во сколько раз энтропия выше порога
- * (множитель силы штрафа: чем дальше за порогом, тем сильнее).
+ * Ожидается raw > threshold. Возвращает raw/threshold — во сколько раз энтропия выше порога
+ * (множитель силы штрафа). Раньше под Tenney (log₂); сейчас raw — произведение Benedetti.
  */
 function dissonantPenaltyWeight(raw: number): number {
   return raw / ENTROPY_THRESHOLD;

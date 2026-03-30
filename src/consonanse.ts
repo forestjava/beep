@@ -1,37 +1,67 @@
 import type { JI } from "./jiFromMidi";
 import { jiFromMidi } from "./jiFromMidi";
 
-function tenney([n, d]: JI): number {
-  return Math.log2(n * d);
+/*
+ * --- Tenney (предыдущий эксперимент): log2 от произведения JI ---
+ *
+ * function tenney([n, d]: JI): number {
+ *   return Math.log2(n * d);
+ * }
+ *
+ * function tenneyProductFromRoot(rootMidi: number, otherMidis: readonly number[]): number {
+ *   let sum = 0;
+ *   for (const m of otherMidis) {
+ *     sum += tenney(jiFromMidi(rootMidi, m));
+ *   }
+ *   return sum;
+ * }
+ *
+ * function tenneyProductStacked(midis: readonly number[]): number {
+ *   let sum = 0;
+ *   for (let i = 0; i < midis.length - 1; i++) {
+ *     sum += tenney(jiFromMidi(midis[i]!, midis[i + 1]!));
+ *   }
+ *   return sum;
+ * }
+ */
+
+/** Benedetti: произведение n·d для одного JI-интервала (как в ji_matrix_midi_21_108.js). */
+function benedetti([n, d]: JI): number {
+  return n * d;
 }
 
 /**
- * Tenney от корня: Σ log₂(nᵢ·dᵢ) для интервалов jiFromMidi(root, mᵢ).
- * Эквивалентно log₂(Π (nᵢ·dᵢ)) — как productAllFromRoot + tenneyFromRoot в ji_chord_intervals.js.
+ * Benedetti от корня: Π (nᵢ·dᵢ) для интервалов jiFromMidi(root, mᵢ).
+ * Связь с Tenney: tenneyProductFromRoot = log₂(этого произведения).
  */
-function tenneyProductFromRoot(rootMidi: number, otherMidis: readonly number[]): number {
-  let sum = 0;
+function benedettiProductFromRoot(rootMidi: number, otherMidis: readonly number[]): number {
+  let prod = 1;
   for (const m of otherMidis) {
-    sum += tenney(jiFromMidi(rootMidi, m));
+    prod *= benedetti(jiFromMidi(rootMidi, m));
   }
-  return sum;
+  return prod;
 }
 
 /**
- * Tenney по «ступенчатой» цепочке: Σ log₂(nᵢ·dᵢ) для jiFromMidi(mᵢ, mᵢ₊₁),
- * как stacked + productAllStacked + tenneyStacked в ji_chord_intervals.js (порядок нот — как в аккорде сверху вверх).
+ * Benedetti по «ступенчатой» цепочке: Π (nᵢ·dᵢ) для jiFromMidi(mᵢ, mᵢ₊₁).
+ * Связь с Tenney: tenneyProductStacked = log₂(этого произведения).
  */
-function tenneyProductStacked(midis: readonly number[]): number {
-  let sum = 0;
+function benedettiProductStacked(midis: readonly number[]): number {
+  let prod = 1;
   for (let i = 0; i < midis.length - 1; i++) {
-    sum += tenney(jiFromMidi(midis[i]!, midis[i + 1]!));
+    prod *= benedetti(jiFromMidi(midis[i]!, midis[i + 1]!));
   }
-  return sum;
+  return prod;
 }
 
 /**
- * JI / Tenney-метрика для двух и более MIDI.
- * Эксперимент: stacked-интервалы между соседними аргументами (см. ji_chord_intervals.js).
+ * JI-метрика для двух и более MIDI (эксперимент: Benedetti — произведение n·d).
+ * Корень — первый аргумент; произведение Benedetti от корня к остальным (как ji_matrix_midi_21_108.js / аналог product от корня).
+ *
+ * Предыдущая ветка (Tenney):
+ *   const root = midis[0]!;
+ *   return tenneyProductFromRoot(root, midis.slice(1));
+ *   // или: return tenneyProductStacked(midis);
  */
 export function getEntropy(...midis: number[]): number {
   const n = midis.length;
@@ -39,9 +69,8 @@ export function getEntropy(...midis: number[]): number {
     throw new Error(`getEntropy: expected at least 2 MIDI values, got ${n}`);
   }
 
-  // return tenneyProductStacked(midis);
-
-  // Корень — первый аргумент; сумма Tenney от корня к остальным (ji_matrix_midi_21_108.js).
   const root = midis[0]!;
-  return tenneyProductFromRoot(root, midis.slice(1));
+  // return tenneyProductStacked(midis);
+  // return tenneyProductFromRoot(root, midis.slice(1));
+  return benedettiProductFromRoot(root, midis.slice(1));
 }
