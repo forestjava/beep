@@ -13,10 +13,11 @@ export function TickIntervalKnob() {
     <div className="knob-row">
       <label className="knob-label">TICK_INTERVAL</label>
       <RotaryKnob
-        min={TICK_INTERVAL_MIN / TICK_INTERVAL_SCALE}
-        value={value / TICK_INTERVAL_SCALE}
-        onChange={(turns) => {
-          const next = Math.round(turns * TICK_INTERVAL_SCALE);
+        scale={TICK_INTERVAL_SCALE}
+        min={TICK_INTERVAL_MIN}
+        value={value}
+        onChange={(userValue) => {
+          const next = Math.round(userValue);
           if (next !== value) {
             setValue(next);
             beepPlayer.setTickInterval(next);

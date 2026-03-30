@@ -180,17 +180,30 @@ export type RotaryKnobProps = {
   onChange: (value: number) => void;
   min?: number;
   max?: number;
+  /**
+   * Пользовательских единиц на один полный оборот. Без `scale` (или при `1`) `value`/`min`/`max` и `onChange` — в оборотах.
+   * С `scale` те же пропы и аргумент `onChange` — в пользовательских единицах.
+   */
+  scale?: number;
 };
 
 export function RotaryKnob(props: RotaryKnobProps) {
-  const { value, onChange, min, max } = props;
+  const { value, onChange, min, max, scale } = props;
+  const userScale = scale ?? 1;
+  const turnClampMin =
+    min === undefined ? undefined : min / userScale;
+  const turnClampMax =
+    max === undefined ? undefined : max / userScale;
+
   const gradientSuffix = useId().replace(/:/g, "");
 
   const rootRef = useRef<HTMLDivElement | null>(null);
-  const minRef = useRef(min);
-  const maxRef = useRef(max);
-  minRef.current = min;
-  maxRef.current = max;
+  const turnClampMinRef = useRef(turnClampMin);
+  const turnClampMaxRef = useRef(turnClampMax);
+  turnClampMinRef.current = turnClampMin;
+  turnClampMaxRef.current = turnClampMax;
+  const userScaleRef = useRef(userScale);
+  userScaleRef.current = userScale;
 
   /** Центр на pointerdown — направление считается от него к clientX/Y. */
   const dragCenterRef = useRef<DragCenter | null>(null);
@@ -246,17 +259,22 @@ export function RotaryKnob(props: RotaryKnobProps) {
         const alpha = 1 - Math.exp(-CATCH_UP_RATE * dt);
         intention = intention + delta * alpha;
       }
-      intention = clampToBounds(intention, minRef.current, maxRef.current);
+      intention = clampToBounds(
+        intention,
+        turnClampMinRef.current,
+        turnClampMaxRef.current
+      );
       intentionRef.current = intention;
 
       if (Math.abs(intention - lastEmittedRef.current) > VALUE_EPS) {
         lastEmittedRef.current = intention;
-        onChangeRef.current(intention);
+        const userValue = intention * userScaleRef.current;
+        onChangeRef.current(userValue);
       }
       setNeedleDeg(needleRotationDeg(intention));
 
-      const min = minRef.current;
-      const max = maxRef.current;
+      const min = turnClampMinRef.current;
+      const max = turnClampMaxRef.current;
       const atMax = max !== undefined && intention >= max - VALUE_EPS;
       const atMin = min !== undefined && intention <= min + VALUE_EPS;
       const stuckPastMax = max !== undefined && atMax && dragTarget >= max;
@@ -295,12 +313,16 @@ export function RotaryKnob(props: RotaryKnobProps) {
   // снаружи поменяли value / границы
   useLayoutEffect(() => {
     if (drivingRef.current) return;
-    const v = clampToBounds(value, min, max);
-    intentionRef.current = v;
-    dragTargetRef.current = v;
-    lastEmittedRef.current = v;
-    setNeedleDeg(needleRotationDeg(v));
-  }, [value, min, max]);
+    const turnValue = clampToBounds(
+      value / userScale,
+      turnClampMin,
+      turnClampMax
+    );
+    intentionRef.current = turnValue;
+    dragTargetRef.current = turnValue;
+    lastEmittedRef.current = turnValue;
+    setNeedleDeg(needleRotationDeg(turnValue));
+  }, [value, min, max, scale]);
 
   useLayoutEffect(
     () => () => {
@@ -317,10 +339,14 @@ export function RotaryKnob(props: RotaryKnobProps) {
     if (!el) return;
 
     drivingRef.current = true;
-    const v0 = clampToBounds(value, min, max);
-    intentionRef.current = v0;
-    dragTargetRef.current = v0;
-    lastEmittedRef.current = v0;
+    const turnValue = clampToBounds(
+      value / userScale,
+      turnClampMin,
+      turnClampMax
+    );
+    intentionRef.current = turnValue;
+    dragTargetRef.current = turnValue;
+    lastEmittedRef.current = turnValue;
 
     dragCenterRef.current = readCenter(el);
     const { cx, cy } = dragCenterRef.current;

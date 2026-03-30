@@ -12,10 +12,11 @@ export function MaxChannelsKnob() {
     <div className="knob-row">
       <label className="knob-label">MAX_CONCURRENT_ENTITIES</label>
       <RotaryKnob
-        min={CHANNELS_MIN / CHANNELS_SCALE}
-        value={value / CHANNELS_SCALE}
-        onChange={(turns) => {
-          const next = Math.round(turns * CHANNELS_SCALE);
+        scale={CHANNELS_SCALE}
+        min={CHANNELS_MIN}
+        value={value}
+        onChange={(userValue) => {
+          const next = Math.round(userValue);
           if (next !== value) {
             setValue(next);
             beepPlayer.setMaxConcurrentEntities(next);
