@@ -7,7 +7,7 @@ import {
 import type { HarmonicEntity } from "./HarmonicEntity";
 
 /** Linear gain smoothing for attack (0 → level) and release (level → 0), in seconds. */
-const SMOOTH_TIME = 0.04;
+const SMOOTH_TIME = 0.025;
 /** Wall-clock slack so timers align with audio render timeline, in seconds. */
 const SLACK_TIME = 0.01;
 

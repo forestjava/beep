@@ -17,7 +17,7 @@ const PIANO_SEMITONE_MAX = 84;
 const PIANO_KEYS = PIANO_SEMITONE_MAX - PIANO_SEMITONE_MIN + 1;
 
 /**
- * Tenney: меньше raw → консонантнее. При raw = 0 вес 2 (максимальный буст);
+ * Tenney: меньше raw → консонантнее. При raw = 0 максимальный буст;
  * при raw = threshold — 0 (порог, буста нет); между ними линейно.
  */
 function consonantBoostWeight(raw: number): number {
@@ -128,10 +128,10 @@ export class Life implements LifeRegistry<LifeCell> {
       const acceptedIndex = steps.filter((s) => s.accepted).length - 1;
       const teamEntropy = steps[acceptedIndex].chordEntropy;
 
-      console.log("[Life] team", {
-        teamSize: team.length,
-        teamEntropy: teamEntropy.toFixed(4),
-      });
+      // console.log("[Life] team", {
+      //   teamSize: team.length,
+      //   teamEntropy: teamEntropy.toFixed(4),
+      // });
 
       team.push(cell);
       for (const peer of peers) {
