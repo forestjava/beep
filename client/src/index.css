@@ -1,0 +1,241 @@
+:root {
+  --panel: #121218;
+  --panel-elevated: #1c1c26;
+  --metal-dark: #2a2a34;
+  --metal-mid: #3d3d4a;
+  --metal-light: #5c5c6e;
+  --accent: #8b5cf6;
+  --accent-dim: #6d28d9;
+  --text: #e4e4eb;
+  --text-muted: #8b8b9a;
+  --track: #2e2e38;
+  --font-ui: 'Segoe UI', system-ui, sans-serif;
+  --font-mono: ui-monospace, 'Cascadia Code', monospace;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100dvh;
+  font-family: var(--font-ui);
+  background: var(--panel);
+  color: var(--text);
+  -webkit-tap-highlight-color: transparent;
+}
+
+#root {
+  min-height: 100dvh;
+}
+
+.app-shell {
+  max-width: 22rem;
+  margin: 0 auto;
+  padding: 1.25rem 1rem 2.5rem;
+}
+
+.app-title {
+  text-align: center;
+  font-size: 1.35rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin: 0 0 1.75rem;
+}
+
+.knob-row {
+  display: grid;
+  grid-template-columns: 5.5rem 1fr;
+  align-items: center;
+  gap: 0.75rem 1rem;
+  margin-bottom: 1.35rem;
+}
+
+.knob-label {
+  grid-column: 1 / -1;
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  margin-bottom: -0.35rem;
+}
+
+.knob-value {
+  font-family: var(--font-mono);
+  font-size: 0.95rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+  line-height: 1.2;
+}
+
+/* Headless knob hit target + stacking */
+.audio-knob-hit {
+  position: relative;
+  width: 5.5rem;
+  height: 5.5rem;
+  border-radius: 50%;
+  touch-action: none;
+  outline: none;
+  cursor: grab;
+}
+
+.audio-knob-hit:active {
+  cursor: grabbing;
+}
+
+.audio-knob-hit:focus-visible {
+  box-shadow: 0 0 0 2px var(--panel), 0 0 0 4px var(--accent);
+}
+
+.audio-knob-svg {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  border-radius: 50%;
+  filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.45));
+}
+
+.piano-block {
+  margin-top: 0.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.piano-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 0.65rem;
+}
+
+.piano-label {
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+}
+
+.piano-readout {
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--accent);
+}
+
+.piano-hint {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  margin-top: 0.5rem;
+  line-height: 1.35;
+}
+
+/* react-slider: range track */
+.piano-slider {
+  width: 100%;
+  height: 2rem;
+}
+
+.piano-slider .piano-track {
+  top: 50%;
+  height: 8px;
+  transform: translateY(-50%);
+  border-radius: 4px;
+  background: var(--track);
+}
+
+.piano-slider .piano-track.piano-track-0 {
+  background: linear-gradient(90deg, var(--track), var(--metal-mid));
+}
+
+.piano-slider .piano-track.piano-track-1 {
+  background: linear-gradient(
+    90deg,
+    var(--accent-dim),
+    var(--accent)
+  );
+  height: 8px;
+}
+
+.piano-slider .piano-track.piano-track-2 {
+  background: linear-gradient(90deg, var(--metal-mid), var(--track));
+}
+
+.piano-slider .piano-thumb {
+  top: 50%;
+  width: 1.35rem;
+  height: 1.35rem;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle at 30% 30%,
+    var(--metal-light),
+    var(--metal-dark) 55%,
+    #1a1a22 100%
+  );
+  border: 2px solid #0d0d12;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.15),
+    0 2px 4px rgba(0, 0, 0, 0.5);
+  cursor: grab;
+  transform: translateY(-50%);
+}
+
+.piano-slider .piano-thumb:active {
+  cursor: grabbing;
+}
+
+.transport-wrap {
+  display: flex;
+  justify-content: center;
+  margin-top: 0.5rem;
+}
+
+.audio-transport {
+  width: 4.5rem;
+  height: 4.5rem;
+  border-radius: 50%;
+  border: 3px solid var(--metal-mid);
+  background: radial-gradient(
+    circle at 35% 30%,
+    var(--metal-mid),
+    var(--metal-dark) 50%,
+    #0f0f14 100%
+  );
+  box-shadow:
+    inset 0 2px 4px rgba(255, 255, 255, 0.06),
+    0 4px 14px rgba(0, 0, 0, 0.55);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  color: var(--text);
+  transition:
+    transform 0.08s ease,
+    box-shadow 0.15s ease;
+}
+
+.audio-transport:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.audio-transport:active {
+  transform: scale(0.96);
+}
+
+.audio-transport:focus-visible {
+  outline: none;
+  box-shadow:
+    0 0 0 2px var(--panel),
+    0 0 0 4px var(--accent);
+}
+
+.audio-transport svg {
+  width: 1.65rem;
+  height: 1.65rem;
+  display: block;
+}
