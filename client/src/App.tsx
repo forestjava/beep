@@ -1,5 +1,10 @@
 import { useCallback, useState } from 'react'
-import { RotaryKnob } from './components/AudioKnob'
+import {
+  DurationKnob,
+  EntropyThresholdKnob,
+  MaxConcurrentEntitiesKnob,
+  TickIntervalKnob,
+} from './components/knobs'
 import { PianoRangeSlider } from './components/PianoRangeSlider'
 import { TransportButton } from './components/TransportButton'
 import {
@@ -49,23 +54,19 @@ export default function App() {
     <div className="app-shell">
       <h1 className="app-title">Beep</h1>
 
-      <RotaryKnob
-        label="TICK_INTERVAL"
+      <TickIntervalKnob
         value={tick}
         onChange={bind(setTick, p.setTickInterval.bind(p))}
       />
-      <RotaryKnob
-        label="MAX_CONCURRENT_ENTITIES"
+      <MaxConcurrentEntitiesKnob
         value={entities}
         onChange={bind(setEntities, p.setMaxConcurrentEntities.bind(p))}
       />
-      <RotaryKnob
-        label="ENTROPY_THRESHOLD"
+      <EntropyThresholdKnob
         value={entropy}
         onChange={bind(setEntropy, p.setEntropyThreshold.bind(p))}
       />
-      <RotaryKnob
-        label="DURATION"
+      <DurationKnob
         value={duration}
         onChange={bind(setDuration, p.setDuration.bind(p))}
       />

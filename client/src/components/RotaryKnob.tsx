@@ -160,14 +160,10 @@ function Face(props: { deg: number }) {
   );
 }
 
-/* ---------- Публичный компонент ---------- */
+/* ---------- Базовая крутилка (примитив для доменных обёрток в `./knobs/`) ---------- */
 
 export type RotaryKnobProps = {
   label: string;
-  /**
-   * Полные обороты + доля (может быть <0 или >1): целая часть — витки,
-   * дробная — угол на циферблате; при пересечении 0/1 витки наращиваются, без скачка.
-   */
   value: number;
   onChange: (value: number) => void;
 };
@@ -340,6 +336,3 @@ export function RotaryKnob(props: RotaryKnobProps) {
     </div>
   );
 }
-
-/** То же, что `RotaryKnob` — имя файла для импорта. */
-export const AudioKnob = RotaryKnob
