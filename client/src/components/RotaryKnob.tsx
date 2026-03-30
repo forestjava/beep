@@ -18,8 +18,8 @@ const CATCH_UP_RATE = 10;
 /** Квадрат расстояния до центра, ниже которого направление не определено. */
 const CENTER_EPS2 = 4;
 
-/** Порог совпадения с целью (доля оборота). */
-const TURN_EPS = 1e-4;
+/** Порог совпадения сглаженного значения с целью. */
+const VALUE_EPS = 1e-4;
 
 /** Параметры визуального циферблата. */
 const CENTER = 48;
@@ -43,16 +43,15 @@ function normTurn(t: number): number {
 }
 
 /**
- * Угол указателя [0,1) → ближайшее «развёрнутое» число к prev (без скачка 1↔0).
- * По часовой: …0.95 → 1.05 → 2…; против: …0.05 → −0.05 → −1…
+ * Дробная часть указателя [0,1) → ближайшее развёрнутое значение к `prev` (без скачка 1↔0).
  */
-function unwrapNormToNear(prev: number, pointerNorm01: number): number {
-  const n = normTurn(pointerNorm01);
-  return n + Math.round(prev - n);
+function unwrapFractionNear(prev: number, fraction01: number): number {
+  const f = normTurn(fraction01);
+  return f + Math.round(prev - f);
 }
 
-/** Доля оборота [0,1) по направлению центр → указатель; null если слишком близко к центру. */
-function pointerToTurn(
+/** Доля полного оборота [0,1) по направлению центр → указатель. */
+function pointerFraction(
   cx: number,
   cy: number,
   clientX: number,
@@ -67,9 +66,14 @@ function pointerToTurn(
   return phi / TAU;
 }
 
+/** Единственная стыковка к SVG: поворот стрелки 0…360° из дробной части значения. */
+function needleRotationDeg(unwrappedValue: number): number {
+  return normTurn(unwrappedValue) * 360;
+}
+
 /* ---------- Визуальная часть («фейс» ручки) ---------- */
 
-function Face(props: { deg: number }) {
+function Face(props: { rotationDeg: number }) {
   const sid = useId().replace(/:/g, "");
   const ticks = Array.from({ length: 12 }, (_, i) => ({
     i,
@@ -98,7 +102,7 @@ function Face(props: { deg: number }) {
       <circle cx={CENTER} cy={CENTER} r={40} fill={`url(#kf${sid})`} />
 
       {/* риски и маркер вращаются поверх шляпки */}
-      <g transform={`rotate(${props.deg} ${CENTER} ${CENTER})`}>
+      <g transform={`rotate(${props.rotationDeg} ${CENTER} ${CENTER})`}>
         {ticks.map(({ i, a, major }) => {
           const rad = (a * Math.PI) / 180;
           const c = Math.cos(rad);
@@ -160,10 +164,15 @@ function Face(props: { deg: number }) {
   );
 }
 
-/* ---------- Базовая крутилка (примитив для доменных обёрток в `./knobs/`) ---------- */
+/*
+ * Базовая крутилка: внутри везде одно число — как `value` / onChange (развёрнутое).
+ * Угол стрелки на SVG = needleRotationDeg(value); геометрия указателя даёт только [0,1) → unwrapFractionNear.
+ */
+/* ---------- Публичный примитив (обёртки в `./knobs/`) ---------- */
 
 export type RotaryKnobProps = {
   label: string;
+  /** Развёрнутое число (целые витки + дробь); смысл задаёт обёртка / родитель. */
   value: number;
   onChange: (value: number) => void;
 };
@@ -184,14 +193,15 @@ export function RotaryKnob(props: RotaryKnobProps) {
   /** Ссылка на `end` этой сессии — для сравнения с `knobDragEnd` при размонтировании. */
   const sessionEndRef = useRef<(() => void) | null>(null);
 
-  const targetTurnRef = useRef(0);
-  const displayTurnRef = useRef(0);
+  /** Сглаживаемое и целевое значение — тот же смысл, что у пропа `value` (развёрнутое). */
+  const targetRef = useRef(0);
+  const displayRef = useRef(0);
   const rafIdRef = useRef(0);
   const lastTickTsRef = useRef<number | undefined>(undefined);
-  /** Локальная анимация / перетаскивание — не перетирать deg из props. */
+  /** Локальная анимация / перетаскивание — не перетирать из пропа. */
   const drivingRef = useRef(false);
 
-  const [deg, setDeg] = useState(0);
+  const [needleDeg, setNeedleDeg] = useState(0);
 
   const onChangeRef = useRef(onChange);
   onChangeRef.current = onChange;
@@ -217,22 +227,22 @@ export function RotaryKnob(props: RotaryKnobProps) {
       const dt = Math.min(0.05, (now - last) / 1000);
       lastTickTsRef.current = now;
 
-      const target = targetTurnRef.current;
-      let display = displayTurnRef.current;
+      const target = targetRef.current;
+      let display = displayRef.current;
       const delta = target - display;
-      if (Math.abs(delta) < TURN_EPS) {
+      if (Math.abs(delta) < VALUE_EPS) {
         display = target;
       } else {
         const alpha = 1 - Math.exp(-CATCH_UP_RATE * dt);
         display = display + delta * alpha;
       }
-      displayTurnRef.current = display;
+      displayRef.current = display;
 
       onChangeRef.current(display);
-      setDeg(normTurn(display) * 360);
+      setNeedleDeg(needleRotationDeg(display));
 
       const dragging = dragCenterRef.current !== null;
-      const chasing = Math.abs(targetTurnRef.current - display) > TURN_EPS;
+      const chasing = Math.abs(targetRef.current - display) > VALUE_EPS;
       if (dragging || chasing) {
         rafIdRef.current = requestAnimationFrame(tick);
       } else {
@@ -246,9 +256,9 @@ export function RotaryKnob(props: RotaryKnobProps) {
 
   const setTargetFromPointer = useCallback(
     (cx: number, cy: number, clientX: number, clientY: number) => {
-      const t = pointerToTurn(cx, cy, clientX, clientY);
-      if (t === null) return;
-      targetTurnRef.current = unwrapNormToNear(targetTurnRef.current, t);
+      const frac = pointerFraction(cx, cy, clientX, clientY);
+      if (frac === null) return;
+      targetRef.current = unwrapFractionNear(targetRef.current, frac);
     },
     []
   );
@@ -259,9 +269,9 @@ export function RotaryKnob(props: RotaryKnobProps) {
   // снаружи поменяли value
   useLayoutEffect(() => {
     if (drivingRef.current) return;
-    displayTurnRef.current = value;
-    targetTurnRef.current = value;
-    setDeg(normTurn(value) * 360);
+    displayRef.current = value;
+    targetRef.current = value;
+    setNeedleDeg(needleRotationDeg(value));
   }, [value]);
 
   useLayoutEffect(
@@ -279,8 +289,8 @@ export function RotaryKnob(props: RotaryKnobProps) {
     if (!el) return;
 
     drivingRef.current = true;
-    displayTurnRef.current = value;
-    targetTurnRef.current = value;
+    displayRef.current = value;
+    targetRef.current = value;
 
     dragCenterRef.current = readCenter(el);
     const { cx, cy } = dragCenterRef.current;
@@ -328,7 +338,7 @@ export function RotaryKnob(props: RotaryKnobProps) {
         tabIndex={0}
         onPointerDown={handlePointerDown}
       >
-        <Face deg={deg} />
+        <Face rotationDeg={needleDeg} />
       </div>
       <output className="knob-value" htmlFor={id}>
         {fmt(value)}
