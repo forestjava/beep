@@ -2,7 +2,7 @@ import { useCallback, useState } from 'react'
 import {
   DurationKnob,
   EntropyThresholdKnob,
-  MaxConcurrentEntitiesKnob,
+  MaxChannelsKnob,
   TickIntervalKnob,
 } from './components/knobs'
 import { PianoRangeSlider } from './components/PianoRangeSlider'
@@ -43,7 +43,7 @@ export default function App() {
       <h1 className="app-title">Beep</h1>
 
       <TickIntervalKnob />
-      <MaxConcurrentEntitiesKnob />
+      <MaxChannelsKnob />
       <EntropyThresholdKnob />
       <DurationKnob />
 

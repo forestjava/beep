@@ -1,4 +1,4 @@
-export { TickIntervalKnob, TICK_INTERVAL_SCALE } from "./TickIntervalKnob";
-export { MaxConcurrentEntitiesKnob } from "./MaxConcurrentEntitiesKnob";
+export { TickIntervalKnob } from "./TickIntervalKnob";
+export { MaxChannelsKnob } from "./MaxChannelsKnob";
 export { EntropyThresholdKnob } from "./EntropyThresholdKnob";
 export { DurationKnob } from "./DurationKnob";
