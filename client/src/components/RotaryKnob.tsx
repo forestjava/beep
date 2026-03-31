@@ -208,27 +208,27 @@ export function RotaryKnob(props: RotaryKnobProps) {
   /** Задержанная копия target, float, без ограничений min/max. */
   const intentionRef = useRef(0);
   const lastEmittedRef = useRef(0);
-  const rafIdRef = useRef(0);
+  /** id кадра requestAnimationFrame для догона intention → target (0 — цикл не крутится). */
+  const catchUpRafIdRef = useRef(0);
   const lastTickTsRef = useRef<number | undefined>(undefined);
-  const drivingRef = useRef(false);
 
   const [needleDeg, setNeedleDeg] = useState(0);
 
   const stopRaf = useCallback(() => {
-    if (rafIdRef.current !== 0) {
-      cancelAnimationFrame(rafIdRef.current);
-      rafIdRef.current = 0;
+    if (catchUpRafIdRef.current !== 0) {
+      cancelAnimationFrame(catchUpRafIdRef.current);
+      catchUpRafIdRef.current = 0;
     }
     lastTickTsRef.current = undefined;
   }, []);
 
   const scheduleCatchUp = useCallback(() => {
-    if (rafIdRef.current !== 0) return;
+    if (catchUpRafIdRef.current !== 0) return;
     const tick = (now: number) => {
       let last = lastTickTsRef.current;
       if (last === undefined) {
         lastTickTsRef.current = now;
-        rafIdRef.current = requestAnimationFrame(tick);
+        catchUpRafIdRef.current = requestAnimationFrame(tick);
         return;
       }
 
@@ -268,16 +268,15 @@ export function RotaryKnob(props: RotaryKnobProps) {
         snap.max,
         smoothEps
       );
-      const dragging = pointerCenterRef.current !== null;
-      if (!caughtUp || dragging) {
-        rafIdRef.current = requestAnimationFrame(tick);
+      const pointerDown = pointerCenterRef.current !== null;
+      if (!caughtUp || pointerDown) {
+        catchUpRafIdRef.current = requestAnimationFrame(tick);
       } else {
-        rafIdRef.current = 0;
+        catchUpRafIdRef.current = 0;
         lastTickTsRef.current = undefined;
-        drivingRef.current = false;
       }
     };
-    rafIdRef.current = requestAnimationFrame(tick);
+    catchUpRafIdRef.current = requestAnimationFrame(tick);
   }, []);
 
   const setTargetFromPointer = useCallback(
@@ -295,7 +294,9 @@ export function RotaryKnob(props: RotaryKnobProps) {
   setTargetFromPointerRef.current = setTargetFromPointer;
 
   useLayoutEffect(() => {
-    if (drivingRef.current) return;
+    const local =
+      pointerCenterRef.current != null || catchUpRafIdRef.current !== 0;
+    if (local) return;
     const out = toOutUser(value, min, max, !!discrete);
     intentionRef.current = out;
     targetRef.current = out;
@@ -317,7 +318,6 @@ export function RotaryKnob(props: RotaryKnobProps) {
     const el = rootRef.current;
     if (!el) return;
 
-    drivingRef.current = true;
     const out = toOutUser(value, min, max, !!discrete);
     intentionRef.current = out;
     targetRef.current = out;
