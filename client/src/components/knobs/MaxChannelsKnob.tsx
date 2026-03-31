@@ -12,15 +12,16 @@ export function MaxChannelsKnob() {
     <div className="knob-row">
       <label className="knob-label">MAX_CONCURRENT_ENTITIES</label>
       <RotaryKnob
+        discrete
         scale={CHANNELS_SCALE}
         min={CHANNELS_MIN}
         value={value}
         onChange={(userValue) => {
           const next = Math.round(userValue);
-          if (next !== value) {
-            setValue(next);
-            beepPlayer.setMaxConcurrentEntities(next);
-          }
+          //if (next !== value) {
+          setValue(next);
+          beepPlayer.setMaxConcurrentEntities(next);
+          //}
         }}
       />
       <output className="knob-value">{String(value)}</output>

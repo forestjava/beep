@@ -12,28 +12,19 @@ const TAU = 2 * Math.PI;
 /** Пока не null — жест крутилки уже захвачен другим экземпляром `RotaryKnob`. */
 let knobDragEnd: (() => void) | null = null;
 
-/** Скорость «догоняния» стрелки к курсору (экспонента, 1/с; больше — быстрее). */
 const CATCH_UP_RATE = 10;
-
-/** Квадрат расстояния до центра, ниже которого направление не определено. */
 const CENTER_EPS2 = 4;
-
-/** Порог совпадения сглаженного значения с целью и для дедупа onChange. */
 const VALUE_EPS = 1e-4;
 
-/** Параметры визуального циферблата. */
 const CENTER = 48;
-/** Маркер на ободе (как внешние концы рисок). */
 const RIM_R = 44;
-/** Длина стрелки от центра вверх (короче прежних ~21px в 1.5 раза). */
 const NEEDLE_LEN = 14;
-/** Смещение рёбер вдавленного желоба (свет сверху-слева → тень справа). */
 const NEEDLE_INSET_DX = 0.85;
 const NEEDLE_INSET_LX = -0.72;
 
-type DragCenter = { cx: number; cy: number };
+type PointerCenter = { cx: number; cy: number };
 
-function readCenter(el: HTMLElement): DragCenter {
+function readCenter(el: HTMLElement): PointerCenter {
   const r = el.getBoundingClientRect();
   return { cx: r.left + r.width / 2, cy: r.top + r.height / 2 };
 }
@@ -42,26 +33,24 @@ function normTurn(t: number): number {
   return ((t % 1) + 1) % 1;
 }
 
-function clampToBounds(
-  v: number,
+/** Сжатие и при необходимости округление → значение для родителя и стрелки (`outUser`). */
+function toOutUser(
+  intention: number,
   min: number | undefined,
-  max: number | undefined
+  max: number | undefined,
+  discrete: boolean
 ): number {
-  let x = v;
+  let x = discrete ? Math.round(intention) : intention;
   if (min !== undefined && x < min) x = min;
   if (max !== undefined && x > max) x = max;
   return x;
 }
 
-/**
- * Дробная часть указателя [0,1) → ближайшее развёрнутое значение к `prev` (без скачка 1↔0).
- */
 function unwrapFractionNear(prev: number, fraction01: number): number {
   const f = normTurn(fraction01);
   return f + Math.round(prev - f);
 }
 
-/** Доля полного оборота [0,1) по направлению центр → указатель. */
 function pointerFraction(
   cx: number,
   cy: number,
@@ -77,18 +66,32 @@ function pointerFraction(
   return phi / TAU;
 }
 
-/** Единственная стыковка к SVG: поворот стрелки 0…360° из дробной части значения. */
 function needleRotationDeg(unwrappedValue: number): number {
   return normTurn(unwrappedValue) * 360;
 }
 
-/* ---------- Визуальная часть («фейс» ручки) ---------- */
+/** Догон завершён или «упор» у границы при курсоре за шкалой. */
+function isCaughtUp(
+  intention: number,
+  target: number,
+  min: number | undefined,
+  max: number | undefined,
+  eps: number
+): boolean {
+  if (Math.abs(target - intention) < eps) return true;
+  const hi = max ?? Infinity;
+  const lo = min ?? -Infinity;
+  return (
+    (intention >= hi - eps && target >= hi) ||
+    (intention <= lo + eps && target <= lo)
+  );
+}
 
 function Face(props: { rotationDeg: number; gradientSuffix: string }) {
   const sid = props.gradientSuffix;
   const ticks = Array.from({ length: 12 }, (_, i) => ({
     i,
-    a: -90 + i * 30, // 12 делений по кругу, 0° = 12 часов
+    a: -90 + i * 30,
     major: i % 3 === 0,
   }));
 
@@ -107,12 +110,9 @@ function Face(props: { rotationDeg: number; gradientSuffix: string }) {
         </linearGradient>
       </defs>
 
-      {/* неподвижный обод */}
       <circle cx={CENTER} cy={CENTER} r={46} fill={`url(#kr${sid})`} />
-      {/* шляпка с бликом — в мировых координатах, не крутится */}
       <circle cx={CENTER} cy={CENTER} r={40} fill={`url(#kf${sid})`} />
 
-      {/* риски и маркер вращаются поверх шляпки */}
       <g transform={`rotate(${props.rotationDeg} ${CENTER} ${CENTER})`}>
         {ticks.map(({ i, a, major }) => {
           const rad = (a * Math.PI) / 180;
@@ -131,7 +131,6 @@ function Face(props: { rotationDeg: number; gradientSuffix: string }) {
             />
           );
         })}
-        {/* вдавленный паз: сначала тень справа, дно, светлый скат слева сверху */}
         <line
           x1={CENTER + NEEDLE_INSET_DX}
           x2={CENTER + NEEDLE_INSET_DX}
@@ -185,49 +184,35 @@ export type RotaryKnobProps = {
    * С `scale` те же пропы и аргумент `onChange` — в пользовательских единицах.
    */
   scale?: number;
+  /**
+   * Целые `userValue` в `onChange`: стрелка и эмит по `outUser` с округлением; `intention` по-прежнему плавно догоняет `target`.
+   */
+  discrete?: boolean;
 };
 
 export function RotaryKnob(props: RotaryKnobProps) {
-  const { value, onChange, min, max, scale } = props;
+  const { value, min, max, scale, discrete } = props;
   const userScale = scale ?? 1;
-  const turnClampMin =
-    min === undefined ? undefined : min / userScale;
-  const turnClampMax =
-    max === undefined ? undefined : max / userScale;
 
   const gradientSuffix = useId().replace(/:/g, "");
 
   const rootRef = useRef<HTMLDivElement | null>(null);
-  const turnClampMinRef = useRef(turnClampMin);
-  const turnClampMaxRef = useRef(turnClampMax);
-  turnClampMinRef.current = turnClampMin;
-  turnClampMaxRef.current = turnClampMax;
-  const userScaleRef = useRef(userScale);
-  userScaleRef.current = userScale;
+  const snapshotRef = useRef(props);
+  snapshotRef.current = props;
 
-  /** Центр на pointerdown — направление считается от него к clientX/Y. */
-  const dragCenterRef = useRef<DragCenter | null>(null);
-  /** Ссылка на `end` этой сессии — для сравнения с `knobDragEnd` при размонтировании. */
+  const pointerCenterRef = useRef<PointerCenter | null>(null);
   const sessionEndRef = useRef<(() => void) | null>(null);
 
-  /**
-   * Угол/значение, заданное указателем (без min/max). Может уходить за пределы —
-   * иначе «догонка» никогда не подводит intention к границе, пока курсор уже за шкалой.
-   */
-  const dragTargetRef = useRef(0);
-  /** Сглаженное значение к drag; после шага приводится к [min, max] — как у пропа `value`. */
+  /** Угол с указателя (user), без onChange. */
+  const targetRef = useRef(0);
+  /** Задержанная копия target, float, без ограничений min/max. */
   const intentionRef = useRef(0);
-  /** Последнее значение, отправленное в onChange (дедуп при том же clamped). */
   const lastEmittedRef = useRef(0);
   const rafIdRef = useRef(0);
   const lastTickTsRef = useRef<number | undefined>(undefined);
-  /** Локальная анимация / перетаскивание — не перетирать из пропа. */
   const drivingRef = useRef(false);
 
   const [needleDeg, setNeedleDeg] = useState(0);
-
-  const onChangeRef = useRef(onChange);
-  onChangeRef.current = onChange;
 
   const stopRaf = useCallback(() => {
     if (rafIdRef.current !== 0) {
@@ -250,42 +235,40 @@ export function RotaryKnob(props: RotaryKnobProps) {
       const dt = Math.min(0.05, (now - last) / 1000);
       lastTickTsRef.current = now;
 
-      const dragTarget = dragTargetRef.current;
+      const snap = snapshotRef.current;
+      const s = snap.scale ?? 1;
+      const smoothEps = snap.discrete ? 0.5 : VALUE_EPS * s;
+
+      const target = targetRef.current;
       let intention = intentionRef.current;
-      const delta = dragTarget - intention;
-      if (Math.abs(delta) < VALUE_EPS) {
-        intention = dragTarget;
+      const delta = target - intention;
+      if (Math.abs(delta) < smoothEps) {
+        intention = target;
       } else {
-        const alpha = 1 - Math.exp(-CATCH_UP_RATE * dt);
-        intention = intention + delta * alpha;
+        intention += delta * (1 - Math.exp(-CATCH_UP_RATE * dt));
       }
-      intention = clampToBounds(
-        intention,
-        turnClampMinRef.current,
-        turnClampMaxRef.current
-      );
       intentionRef.current = intention;
 
-      if (Math.abs(intention - lastEmittedRef.current) > VALUE_EPS) {
-        lastEmittedRef.current = intention;
-        const userValue = intention * userScaleRef.current;
-        onChangeRef.current(userValue);
+      const outUser = toOutUser(
+        intention,
+        snap.min,
+        snap.max,
+        !!snap.discrete
+      );
+      if (Math.abs(outUser - lastEmittedRef.current) > smoothEps) {
+        lastEmittedRef.current = outUser;
+        snap.onChange(outUser);
       }
-      setNeedleDeg(needleRotationDeg(intention));
+      setNeedleDeg(needleRotationDeg(outUser / s));
 
-      const min = turnClampMinRef.current;
-      const max = turnClampMaxRef.current;
-      const atMax = max !== undefined && intention >= max - VALUE_EPS;
-      const atMin = min !== undefined && intention <= min + VALUE_EPS;
-      const stuckPastMax = max !== undefined && atMax && dragTarget >= max;
-      const stuckPastMin = min !== undefined && atMin && dragTarget <= min;
-      const caughtUp =
-        Math.abs(dragTarget - intention) < VALUE_EPS ||
-        stuckPastMax ||
-        stuckPastMin;
-
-      const dragging = dragCenterRef.current !== null;
-      // Пока жест активен, крутим RAF (как раньше), иначе после «упора» сбросим driving и примем value снаружи.
+      const caughtUp = isCaughtUp(
+        intention,
+        target,
+        snap.min,
+        snap.max,
+        smoothEps
+      );
+      const dragging = pointerCenterRef.current !== null;
       if (!caughtUp || dragging) {
         rafIdRef.current = requestAnimationFrame(tick);
       } else {
@@ -297,32 +280,28 @@ export function RotaryKnob(props: RotaryKnobProps) {
     rafIdRef.current = requestAnimationFrame(tick);
   }, []);
 
-  /** Обновляет только drag-цель по указателю; onChange и clamp — в RAF (intention). */
-  const setDragTargetFromPointer = useCallback(
+  const setTargetFromPointer = useCallback(
     (cx: number, cy: number, clientX: number, clientY: number) => {
       const frac = pointerFraction(cx, cy, clientX, clientY);
       if (frac === null) return;
-      dragTargetRef.current = unwrapFractionNear(dragTargetRef.current, frac);
+      const s = snapshotRef.current.scale ?? 1;
+      const prevTurn = targetRef.current / s;
+      targetRef.current = unwrapFractionNear(prevTurn, frac) * s;
     },
     []
   );
 
-  const setDragTargetFromPointerRef = useRef(setDragTargetFromPointer);
-  setDragTargetFromPointerRef.current = setDragTargetFromPointer;
+  const setTargetFromPointerRef = useRef(setTargetFromPointer);
+  setTargetFromPointerRef.current = setTargetFromPointer;
 
-  // снаружи поменяли value / границы
   useLayoutEffect(() => {
     if (drivingRef.current) return;
-    const turnValue = clampToBounds(
-      value / userScale,
-      turnClampMin,
-      turnClampMax
-    );
-    intentionRef.current = turnValue;
-    dragTargetRef.current = turnValue;
-    lastEmittedRef.current = turnValue;
-    setNeedleDeg(needleRotationDeg(turnValue));
-  }, [value, min, max, scale]);
+    const out = toOutUser(value, min, max, !!discrete);
+    intentionRef.current = out;
+    targetRef.current = out;
+    lastEmittedRef.current = out;
+    setNeedleDeg(needleRotationDeg(out / userScale));
+  }, [value, min, max, scale, discrete]);
 
   useLayoutEffect(
     () => () => {
@@ -339,25 +318,21 @@ export function RotaryKnob(props: RotaryKnobProps) {
     if (!el) return;
 
     drivingRef.current = true;
-    const turnValue = clampToBounds(
-      value / userScale,
-      turnClampMin,
-      turnClampMax
-    );
-    intentionRef.current = turnValue;
-    dragTargetRef.current = turnValue;
-    lastEmittedRef.current = turnValue;
+    const out = toOutUser(value, min, max, !!discrete);
+    intentionRef.current = out;
+    targetRef.current = out;
+    lastEmittedRef.current = out;
 
-    dragCenterRef.current = readCenter(el);
-    const { cx, cy } = dragCenterRef.current;
-    setDragTargetFromPointerRef.current(cx, cy, e.clientX, e.clientY);
+    pointerCenterRef.current = readCenter(el);
+    const { cx, cy } = pointerCenterRef.current;
+    setTargetFromPointerRef.current(cx, cy, e.clientX, e.clientY);
     scheduleCatchUp();
 
     const onWinMove = (ev: Event) => {
-      const c = dragCenterRef.current;
+      const c = pointerCenterRef.current;
       if (!c) return;
       const m = ev as MouseEvent;
-      setDragTargetFromPointerRef.current(c.cx, c.cy, m.clientX, m.clientY);
+      setTargetFromPointerRef.current(c.cx, c.cy, m.clientX, m.clientY);
       scheduleCatchUp();
     };
 
@@ -365,7 +340,7 @@ export function RotaryKnob(props: RotaryKnobProps) {
       window.removeEventListener("pointermove", onWinMove);
       window.removeEventListener("pointerup", end);
       window.removeEventListener("pointercancel", end);
-      dragCenterRef.current = null;
+      pointerCenterRef.current = null;
       if (knobDragEnd === end) knobDragEnd = null;
       sessionEndRef.current = null;
       scheduleCatchUp();

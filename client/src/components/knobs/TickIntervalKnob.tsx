@@ -13,15 +13,16 @@ export function TickIntervalKnob() {
     <div className="knob-row">
       <label className="knob-label">TICK_INTERVAL</label>
       <RotaryKnob
+        discrete
         scale={TICK_INTERVAL_SCALE}
         min={TICK_INTERVAL_MIN}
         value={value}
         onChange={(userValue) => {
           const next = Math.round(userValue);
-          if (next !== value) {
-            setValue(next);
-            beepPlayer.setTickInterval(next);
-          }
+          //if (next !== value) {
+          setValue(next);
+          beepPlayer.setTickInterval(next);
+          //}
         }}
       />
       <output className="knob-value">{String(value)}</output>
