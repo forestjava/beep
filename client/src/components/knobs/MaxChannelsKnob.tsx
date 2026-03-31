@@ -24,7 +24,7 @@ export function MaxChannelsKnob() {
           //}
         }}
       />
-      <output className="knob-value">{String(value)}</output>
+      <output className="knob-value">{value}</output>
     </div>
   );
 }

@@ -7,19 +7,12 @@ import {
 } from './components/knobs'
 import { PianoRangeSlider } from './components/PianoRangeSlider'
 import { TransportButton } from './components/TransportButton'
-import {
-  PIANO_SEMITONE_MAX,
-  PIANO_SEMITONE_MIN,
-} from './piano'
 import { beepPlayer } from './playerSingleton'
 
 export default function App() {
   const p = beepPlayer
 
-  const [pianoRange, setPianoRange] = useState<[number, number]>([
-    PIANO_SEMITONE_MIN,
-    PIANO_SEMITONE_MAX,
-  ])
+  const [pianoRange, setPianoRange] = useState<[number, number]>([21, 84,])
   const [playing, setPlaying] = useState(false)
 
   const onPianoChange = useCallback(
@@ -42,10 +35,12 @@ export default function App() {
     <div className="app-shell">
       <h1 className="app-title">Beep</h1>
 
-      <TickIntervalKnob />
-      <MaxChannelsKnob />
-      <EntropyThresholdKnob />
-      <DurationKnob />
+      <div className="knobs-grid">
+        <TickIntervalKnob />
+        <MaxChannelsKnob />
+        <EntropyThresholdKnob />
+        <DurationKnob />
+      </div>
 
       <div className="piano-block">
         <div className="piano-head">
@@ -55,10 +50,6 @@ export default function App() {
           </span>
         </div>
         <PianoRangeSlider value={pianoRange} onChange={onPianoChange} />
-        <p className="piano-hint">
-          Диапазон 20–100 (полутоны), шаг 1. По умолчанию {PIANO_SEMITONE_MIN}–
-          {PIANO_SEMITONE_MAX}
-        </p>
       </div>
 
       <TransportButton playing={playing} onToggle={togglePlay} />

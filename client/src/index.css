@@ -48,6 +48,18 @@ body {
   margin: 0 0 1.75rem;
 }
 
+.knobs-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1.25rem 0.75rem;
+  margin-bottom: 0.25rem;
+}
+
+.knobs-grid .knob-row {
+  margin-bottom: 0;
+  justify-items: start;
+}
+
 .knob-row {
   display: grid;
   grid-template-columns: 5.5rem 1fr;
@@ -101,8 +113,8 @@ body {
 }
 
 .piano-block {
-  margin-top: 0.5rem;
-  margin-bottom: 1.5rem;
+  margin-top: 1.25rem;
+  margin-bottom: 1.25rem;
 }
 
 .piano-head {
@@ -152,11 +164,9 @@ body {
 }
 
 .piano-slider .piano-track.piano-track-1 {
-  background: linear-gradient(
-    90deg,
-    var(--accent-dim),
-    var(--accent)
-  );
+  background: linear-gradient(90deg,
+      var(--accent-dim),
+      var(--accent));
   height: 8px;
 }
 
@@ -169,12 +179,10 @@ body {
   width: 1.35rem;
   height: 1.35rem;
   border-radius: 50%;
-  background: radial-gradient(
-    circle at 30% 30%,
-    var(--metal-light),
-    var(--metal-dark) 55%,
-    #1a1a22 100%
-  );
+  background: radial-gradient(circle at 30% 30%,
+      var(--metal-light),
+      var(--metal-dark) 55%,
+      #1a1a22 100%);
   border: 2px solid #0d0d12;
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.15),
@@ -190,23 +198,34 @@ body {
 .transport-wrap {
   display: flex;
   justify-content: center;
-  margin-top: 0.5rem;
+  width: 100%;
+  margin-top: 0.25rem;
 }
 
+/* Эксперимент: без отдельного круглого блика — только купол, обод и лёгкий диагональный wash */
 .audio-transport {
-  width: 4.5rem;
-  height: 4.5rem;
+  width: 13.5rem;
+  height: 13.5rem;
   border-radius: 50%;
-  border: 3px solid var(--metal-mid);
-  background: radial-gradient(
-    circle at 35% 30%,
-    var(--metal-mid),
-    var(--metal-dark) 50%,
-    #0f0f14 100%
-  );
+  border: 2px solid #0d0d12;
+  background:
+    linear-gradient(
+      122deg,
+      rgba(255, 255, 255, 0.06) 0%,
+      rgba(255, 255, 255, 0) 42%
+    ),
+    radial-gradient(
+      circle at 42% 54%,
+      #2e2e38 0%,
+      #24242c 38%,
+      #18181e 78%,
+      #121218 100%
+    ),
+    linear-gradient(135deg, #4a4a58 0%, #2a2a32 50%, #15151a 100%);
   box-shadow:
-    inset 0 2px 4px rgba(255, 255, 255, 0.06),
-    0 4px 14px rgba(0, 0, 0, 0.55);
+    inset 2px 3px 5px rgba(255, 255, 255, 0.08),
+    inset -3px -6px 14px rgba(0, 0, 0, 0.48),
+    0 3px 6px rgba(0, 0, 0, 0.45);
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -215,11 +234,13 @@ body {
   color: var(--text);
   transition:
     transform 0.08s ease,
-    box-shadow 0.15s ease;
+    box-shadow 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease;
 }
 
 .audio-transport:hover {
-  border-color: var(--accent);
+  border-color: var(--metal-mid);
   color: var(--accent);
 }
 
@@ -230,12 +251,15 @@ body {
 .audio-transport:focus-visible {
   outline: none;
   box-shadow:
+    inset 2px 3px 5px rgba(255, 255, 255, 0.08),
+    inset -3px -6px 14px rgba(0, 0, 0, 0.48),
     0 0 0 2px var(--panel),
     0 0 0 4px var(--accent);
 }
 
 .audio-transport svg {
-  width: 1.65rem;
-  height: 1.65rem;
+  width: 4rem;
+  height: 4rem;
   display: block;
+  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.35));
 }

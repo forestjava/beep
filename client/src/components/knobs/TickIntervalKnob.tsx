@@ -7,7 +7,7 @@ const TICK_INTERVAL_SCALE = 1000;
 const TICK_INTERVAL_MIN = 40;
 
 export function TickIntervalKnob() {
-  const [value, setValue] = useState(TICK_INTERVAL_MIN);
+  const [value, setValue] = useState(200);
 
   return (
     <div className="knob-row">
@@ -19,13 +19,11 @@ export function TickIntervalKnob() {
         value={value}
         onChange={(userValue) => {
           const next = Math.round(userValue);
-          //if (next !== value) {
           setValue(next);
           beepPlayer.setTickInterval(next);
-          //}
         }}
       />
-      <output className="knob-value">{String(value)}</output>
+      <output className="knob-value">{value}</output>
     </div>
   );
 }

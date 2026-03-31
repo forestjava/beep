@@ -13,8 +13,8 @@ export function PianoRangeSlider(props: PianoRangeSliderProps) {
       className="piano-slider"
       thumbClassName="piano-thumb"
       trackClassName="piano-track"
-      min={20}
-      max={100}
+      min={21}
+      max={108}
       step={1}
       pearling
       minDistance={1}
