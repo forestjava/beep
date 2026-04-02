@@ -29,6 +29,27 @@ export class HarmonicEntityPlayer {
     this.audioContext = audioContext;
   }
 
+  /**
+   * Suspends audio time progression, releases the audio device, and reduces power use.
+   * Resolves when the context has actually entered `suspended`.
+   */
+  suspend(): Promise<void> {
+    return this.audioContext.suspend();
+  }
+
+  /**
+   * Resumes time progression for a previously suspended context.
+   * Resolves after the transition (typically to `running`).
+   */
+  resume(): Promise<void> {
+    return this.audioContext.resume();
+  }
+
+  /** Current {@link AudioContext} lifecycle state (`running` | `suspended` | `closed`). */
+  get state(): AudioContextState {
+    return this.audioContext.state;
+  }
+
   /** Snapshot of entities currently registered (after {@link push}, before {@link remove}). */
   getActiveEntities(): HarmonicEntity[] {
     return [...this.voices.keys()];
@@ -36,12 +57,17 @@ export class HarmonicEntityPlayer {
 
   /**
    * Register an entity: wire nodes, start the oscillator, and track for sync/removal.
+   * Requires {@link state} `running` (e.g. after {@link resume} from a user gesture).
    * Resolves after the attack fade has elapsed (wall clock).
    */
   async push(entity: HarmonicEntity): Promise<void> {
     if (this.voices.has(entity)) return;
 
-    void this.audioContext.resume();
+    if (this.audioContext.state !== "running") {
+      throw new Error(
+        "HarmonicEntityPlayer.push requires AudioContext state 'running'; call await resume() (e.g. from user activation) first.",
+      );
+    }
 
     const t0 = this.audioContext.currentTime;
     const gainNode = new GainNode(this.audioContext);

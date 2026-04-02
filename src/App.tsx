@@ -10,35 +10,24 @@ import { TransportButton } from './components/TransportButton'
 import { beepPlayer } from './playerSingleton'
 
 export default function App() {
-  const p = beepPlayer
 
   const [pianoRange, setPianoRange] = useState<[number, number]>([21, 84,])
   const [playing, setPlaying] = useState(false)
-  const [isProcessing, setIsProcessing] = useState(false)
+  const [loading, setLoading] = useState(false)
 
-  const onPianoChange = useCallback(
-    (range: [number, number]) => {
-      setPianoRange(range)
-      p.setPianoRange(range[0], range[1])
-    },
-    [p],
-  )
+  const onPianoChange = (range: [number, number]) => {
+    setPianoRange(range)
+    beepPlayer.setPianoRange(range[0], range[1])
+  }
 
-  const togglePlay = useCallback(() => {
-    if (isProcessing) return
-    void (async () => {
-      setIsProcessing(true)
-      const next = !playing
-      try {
-        await p.setPlayingAsync(next)
-        setPlaying(next)
-      } catch (err) {
-        console.error(err)
-      } finally {
-        setIsProcessing(false)
-      }
-    })()
-  }, [p, isProcessing, playing])
+  const togglePlay = async () => {
+    if (loading) return
+    setLoading(true)
+    if (playing) await beepPlayer.pause();
+    else await beepPlayer.play();
+    setPlaying(!playing);
+    setLoading(false)
+  };
 
   return (
     <div className="app-shell">
@@ -63,8 +52,8 @@ export default function App() {
 
       <TransportButton
         playing={playing}
+        loading={loading}
         onToggle={togglePlay}
-        isProcessing={isProcessing}
       />
     </div>
   )

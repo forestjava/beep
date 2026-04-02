@@ -15,23 +15,20 @@ function PauseIcon() {
 }
 
 export type TransportButtonProps = {
+  loading: boolean
   playing: boolean
   onToggle: () => void
-  /** Пока true — кнопка disabled, async-команда транспорта выполняется. */
-  isProcessing: boolean
 }
 
 export function TransportButton(props: TransportButtonProps) {
-  const { playing, onToggle, isProcessing } = props
+  const { playing, onToggle, loading } = props
   return (
     <div className="transport-wrap">
       <button
         type="button"
         className="audio-transport"
         onClick={onToggle}
-        disabled={isProcessing}
-        aria-busy={isProcessing}
-        aria-label={playing ? 'Pause' : 'Play'}
+        disabled={loading}
       >
         {playing ? <PauseIcon /> : <PlayIcon />}
       </button>

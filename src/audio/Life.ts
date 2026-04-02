@@ -1,5 +1,5 @@
 import type { LifeRegistry } from "./LifeRegistry";
-import type { HarmonicEntityPlayer } from "./HarmonicEntityPlayer";
+import { HarmonicEntityPlayer } from "./HarmonicEntityPlayer";
 import { LifeCell } from "./LifeCell";
 import { getEntropy } from "./consonanse";
 import { randomEntropyIndex } from "./weights";
@@ -41,11 +41,7 @@ export class Life implements LifeRegistry<LifeCell> {
   /** Предыдущая выбранная MIDI при спавне; первая нота равномерно случайная, далее — по энтропии. */
   private currentKey: number | null = null;
 
-  private readonly player: HarmonicEntityPlayer;
-
-  constructor(player: HarmonicEntityPlayer) {
-    this.player = player;
-  }
+  private readonly player: HarmonicEntityPlayer = new HarmonicEntityPlayer();
 
   async register(cell: LifeCell): Promise<void> {
     await this.player.push(cell.entity);
@@ -164,13 +160,23 @@ export class Life implements LifeRegistry<LifeCell> {
     }
   }
 
-  start(): void {
+  async play(): Promise<void> {
+    await this.player.resume();
     this.timer = setInterval(() => {
       void this.tick();
     }, TICK_INTERVAL_MS);
   }
 
-  stop(): void {
+  async pause(): Promise<void> {
+    await this.player.suspend();
+    if (this.timer !== null) {
+      clearInterval(this.timer);
+      this.timer = null;
+    }
+  }
+
+  async shutdown(): Promise<void> {
+    await this.player.shutdown();
     if (this.timer !== null) {
       clearInterval(this.timer);
       this.timer = null;

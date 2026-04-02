@@ -1,14 +1,7 @@
-import { HarmonicEntityPlayer } from './audio/HarmonicEntityPlayer'
 import { Life } from './audio/Life'
 
 export class BeepPlayer {
-  private life?: Life;
-  private player?: HarmonicEntityPlayer;
-
-  constructor() {
-    this.player = new HarmonicEntityPlayer()
-    this.life = new Life(this.player)
-  }
+  private life: Life = new Life();
 
   setTickInterval(value: number): void {
     void value
@@ -32,18 +25,15 @@ export class BeepPlayer {
   }
 
   async play(): Promise<void> {
-    this.player = new HarmonicEntityPlayer()
-    this.life = new Life(this.player)
-    this.life.start();
+    await this.life.play();
   }
 
-  async stop(): Promise<void> {
-    await this.life?.stop()
-    await this.player?.shutdown()
+  async pause(): Promise<void> {
+    await this.life.pause();
   }
 
-  async setPlayingAsync(playing: boolean): Promise<void> {
-    if (playing) await this.play()
-    else await this.stop()
+  async shutdown(): Promise<void> {
+    await this.life.shutdown()
   }
+
 }
