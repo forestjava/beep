@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { RotaryKnob } from "../RotaryKnob";
-import { beepPlayer } from "../../playerSingleton";
+import { beep } from "../../BeepPlayer";
 
 export function EntropyThresholdKnob() {
   const [value, setValue] = useState(256);
@@ -14,7 +14,7 @@ export function EntropyThresholdKnob() {
         onChange={(turns) => {
           const userValue = 2 ** turns;
           setValue(userValue);
-          beepPlayer.setEntropyThreshold(userValue);
+          beep.setEntropyThreshold(userValue);
         }}
       />
       <output className="knob-value">{String(Math.round(value))}</output>

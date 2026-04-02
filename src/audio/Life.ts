@@ -4,15 +4,13 @@ import { LifeCell } from "./LifeCell";
 import { getEntropy } from "./consonanse";
 import { randomEntropyIndex } from "./weights";
 
-const TICK_INTERVAL_MS = 200;
+import { DURATION_DEFAULT, DURATION_MIN, TICK_INTERVAL_DEFAULT } from "../defaults";
+
 const MAX_CONCURRENT_ENTITIES = 16;
 
 /** Benedetti: порог в произведении n·d; при Tenney было 8 (= log₂ этого), т.е. 2**8. */
 const ENTROPY_THRESHOLD = 256;
 // const ENTROPY_THRESHOLD = 8; // Tenney: Σ log₂(n·d)
-
-const DURATION_MS = 3200;
-const DURATION_TICKS = DURATION_MS / TICK_INTERVAL_MS;
 
 const PIANO_SEMITONE_MIN = 21;
 const PIANO_SEMITONE_MAX = 84;
@@ -38,6 +36,8 @@ export function dissonantPenaltyWeight(raw: number): number {
 export class Life implements LifeRegistry<LifeCell> {
   private readonly active = new Set<LifeCell>();
   private timer: ReturnType<typeof setInterval> | null = null;
+  private tickInterval = TICK_INTERVAL_DEFAULT;
+  private duration = DURATION_DEFAULT;
   /** Предыдущая выбранная MIDI при спавне; первая нота равномерно случайная, далее — по энтропии. */
   private currentKey: number | null = null;
 
@@ -97,7 +97,7 @@ export class Life implements LifeRegistry<LifeCell> {
     const cell = new LifeCell(
       this,
       this.pickNextSpawnMidi(), //PIANO_SEMITONE_MIN + Math.floor(Math.random() * PIANO_KEYS), //
-      Math.random() * DURATION_TICKS,
+      Math.random() * (this.duration / this.tickInterval),
       0,
       Math.random() * 2 - 1,
     );
@@ -160,11 +160,15 @@ export class Life implements LifeRegistry<LifeCell> {
     }
   }
 
-  async play(): Promise<void> {
-    await this.player.resume();
+  private scheduleTickTimer(): void {
     this.timer = setInterval(() => {
       void this.tick();
-    }, TICK_INTERVAL_MS);
+    }, this.tickInterval);
+  }
+
+  async play(): Promise<void> {
+    await this.player.resume();
+    this.scheduleTickTimer();
   }
 
   async pause(): Promise<void> {
@@ -182,4 +186,30 @@ export class Life implements LifeRegistry<LifeCell> {
       this.timer = null;
     }
   }
+
+  setTickInterval(value: number): void {
+    this.tickInterval = Math.max(1, Math.round(value));
+    if (this.timer !== null) {
+      clearInterval(this.timer);
+      this.scheduleTickTimer();
+    }
+  }
+
+  setMaxConcurrentEntities(value: number): void {
+    void value
+  }
+
+  setEntropyThreshold(value: number): void {
+    void value
+  }
+
+  setDuration(value: number): void {
+    this.duration = value;
+  }
+
+  setPianoRange(minSemitone: number, maxSemitone: number): void {
+    void minSemitone
+    void maxSemitone
+  }
+
 }

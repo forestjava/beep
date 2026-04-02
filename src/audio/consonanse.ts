@@ -69,8 +69,9 @@ export function getEntropy(...midis: number[]): number {
     throw new Error(`getEntropy: expected at least 2 MIDI values, got ${n}`);
   }
 
-  const root = midis[0]!;
+  //const root = midis[0]!;
   // return tenneyProductStacked(midis);
   // return tenneyProductFromRoot(root, midis.slice(1));
-  return benedettiProductFromRoot(root, midis.slice(1));
+  // return benedettiProductFromRoot(root, midis.slice(1));
+  return benedettiProductStacked(midis);
 }

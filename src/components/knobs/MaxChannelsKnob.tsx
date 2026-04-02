@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { RotaryKnob } from "../RotaryKnob";
-import { beepPlayer } from "../../playerSingleton";
+import { beep } from "../../BeepPlayer";
 
 const CHANNELS_SCALE = 16;
 const CHANNELS_MIN = 16;
@@ -20,7 +20,7 @@ export function MaxChannelsKnob() {
           const next = Math.round(userValue);
           //if (next !== value) {
           setValue(next);
-          beepPlayer.setMaxConcurrentEntities(next);
+          beep.setMaxConcurrentEntities(next);
           //}
         }}
       />

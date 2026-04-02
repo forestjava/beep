@@ -1,17 +1,15 @@
 import { useState } from "react";
 import { RotaryKnob } from "../RotaryKnob";
-import { beepPlayer } from "../../playerSingleton";
+import { beep } from "../../BeepPlayer";
+import { TICK_INTERVAL_SCALE, TICK_INTERVAL_MIN, TICK_INTERVAL_DEFAULT } from "../../defaults";
 
-/** Один полный оборот ручки соответствует диапазону 0…1000 в единицах интервала. */
-const TICK_INTERVAL_SCALE = 1000;
-const TICK_INTERVAL_MIN = 40;
 
 export function TickIntervalKnob() {
-  const [value, setValue] = useState(200);
+  const [value, setValue] = useState(TICK_INTERVAL_DEFAULT);
 
   return (
     <div className="knob-row">
-      <label className="knob-label">TICK_INTERVAL</label>
+      <label className="knob-label">TICK_INTERVAL_MS</label>
       <RotaryKnob
         discrete
         scale={TICK_INTERVAL_SCALE}
@@ -20,7 +18,7 @@ export function TickIntervalKnob() {
         onChange={(userValue) => {
           const next = Math.round(userValue);
           setValue(next);
-          beepPlayer.setTickInterval(next);
+          beep.setTickInterval(next);
         }}
       />
       <output className="knob-value">{value}</output>

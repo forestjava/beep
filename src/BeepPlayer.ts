@@ -4,7 +4,7 @@ export class BeepPlayer {
   private life: Life = new Life();
 
   setTickInterval(value: number): void {
-    void value
+    this.life.setTickInterval(value);
   }
 
   setMaxConcurrentEntities(value: number): void {
@@ -16,7 +16,7 @@ export class BeepPlayer {
   }
 
   setDuration(value: number): void {
-    void value
+    this.life.setDuration(value);
   }
 
   setPianoRange(minSemitone: number, maxSemitone: number): void {
@@ -37,3 +37,5 @@ export class BeepPlayer {
   }
 
 }
+
+export const beep = new BeepPlayer();

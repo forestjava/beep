@@ -1,21 +1,23 @@
 import { useState } from "react";
 import { RotaryKnob } from "../RotaryKnob";
-import { beepPlayer } from "../../playerSingleton";
+import { beep } from "../../BeepPlayer";
+import { DURATION_SCALE, DURATION_MIN, DURATION_DEFAULT } from "../../defaults";
+
 
 export function DurationKnob() {
-  const [value, setValue] = useState(3200);
+  const [value, setValue] = useState(DURATION_DEFAULT);
 
   return (
     <div className="knob-row">
-      <label className="knob-label">DURATION</label>
+      <label className="knob-label">DURATION_MS</label>
       <RotaryKnob
-        scale={3200}
+        scale={DURATION_SCALE}
         discrete
-        min={40}
+        min={DURATION_MIN}
         value={value}
         onChange={(v) => {
           setValue(v);
-          beepPlayer.setDuration(v);
+          beep.setDuration(v);
         }}
       />
       <output className="knob-value">{value}</output>

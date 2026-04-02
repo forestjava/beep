@@ -7,7 +7,7 @@ import {
 } from './components/knobs'
 import { PianoRangeSlider } from './components/PianoRangeSlider'
 import { TransportButton } from './components/TransportButton'
-import { beepPlayer } from './playerSingleton'
+import { beep } from './BeepPlayer'
 
 export default function App() {
 
@@ -17,14 +17,14 @@ export default function App() {
 
   const onPianoChange = (range: [number, number]) => {
     setPianoRange(range)
-    beepPlayer.setPianoRange(range[0], range[1])
+    beep.setPianoRange(range[0], range[1])
   }
 
   const togglePlay = async () => {
     if (loading) return
     setLoading(true)
-    if (playing) await beepPlayer.pause();
-    else await beepPlayer.play();
+    if (playing) await beep.pause();
+    else await beep.play();
     setPlaying(!playing);
     setLoading(false)
   };
