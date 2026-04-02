@@ -248,6 +248,12 @@ body {
   transform: scale(0.96);
 }
 
+.audio-transport:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+  transform: none;
+}
+
 .audio-transport:focus-visible {
   outline: none;
   box-shadow:

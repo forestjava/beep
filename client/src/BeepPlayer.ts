@@ -1,26 +1,49 @@
-/** Debug stub: будущий плеер; сейчас только логирует изменения настроек. */
+import { HarmonicEntityPlayer } from './audio/HarmonicEntityPlayer'
+import { Life } from './audio/Life'
+
 export class BeepPlayer {
+  private life?: Life;
+  private player?: HarmonicEntityPlayer;
+
+  constructor() {
+    this.player = new HarmonicEntityPlayer()
+    this.life = new Life(this.player)
+  }
+
   setTickInterval(value: number): void {
-    console.log('[BeepPlayer] TICK_INTERVAL', value)
+    void value
   }
 
   setMaxConcurrentEntities(value: number): void {
-    console.log('[BeepPlayer] MAX_CONCURRENT_ENTITIES', value)
+    void value
   }
 
   setEntropyThreshold(value: number): void {
-    console.log('[BeepPlayer] ENTROPY_THRESHOLD', value)
+    void value
   }
 
   setDuration(value: number): void {
-    console.log('[BeepPlayer] DURATION', value)
+    void value
   }
 
   setPianoRange(minSemitone: number, maxSemitone: number): void {
-    console.log('[BeepPlayer] PIANO', { minSemitone, maxSemitone })
+    void minSemitone
+    void maxSemitone
   }
 
-  setPlaying(playing: boolean): void {
-    console.log('[BeepPlayer] playing', playing)
+  async play(): Promise<void> {
+    this.player = new HarmonicEntityPlayer()
+    this.life = new Life(this.player)
+    this.life.start();
+  }
+
+  async stop(): Promise<void> {
+    await this.life?.stop()
+    await this.player?.shutdown()
+  }
+
+  async setPlayingAsync(playing: boolean): Promise<void> {
+    if (playing) await this.play()
+    else await this.stop()
   }
 }

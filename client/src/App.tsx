@@ -14,6 +14,7 @@ export default function App() {
 
   const [pianoRange, setPianoRange] = useState<[number, number]>([21, 84,])
   const [playing, setPlaying] = useState(false)
+  const [isProcessing, setIsProcessing] = useState(false)
 
   const onPianoChange = useCallback(
     (range: [number, number]) => {
@@ -24,12 +25,20 @@ export default function App() {
   )
 
   const togglePlay = useCallback(() => {
-    setPlaying((x) => {
-      const next = !x
-      p.setPlaying(next)
-      return next
-    })
-  }, [p])
+    if (isProcessing) return
+    void (async () => {
+      setIsProcessing(true)
+      const next = !playing
+      try {
+        await p.setPlayingAsync(next)
+        setPlaying(next)
+      } catch (err) {
+        console.error(err)
+      } finally {
+        setIsProcessing(false)
+      }
+    })()
+  }, [p, isProcessing, playing])
 
   return (
     <div className="app-shell">
@@ -52,7 +61,11 @@ export default function App() {
         <PianoRangeSlider value={pianoRange} onChange={onPianoChange} />
       </div>
 
-      <TransportButton playing={playing} onToggle={togglePlay} />
+      <TransportButton
+        playing={playing}
+        onToggle={togglePlay}
+        isProcessing={isProcessing}
+      />
     </div>
   )
 }
