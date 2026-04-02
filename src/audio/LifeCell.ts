@@ -26,7 +26,9 @@ export class LifeCell {
   private _midi: number;
   private _power: number;
   private _pan: number;
-  private _duration: number;
+
+  public duration: number;
+  public protection: boolean;
 
   /** Синтез; поля обновляются из источников midi/power/pan внутри клетки. */
   readonly entity: HarmonicEntity;
@@ -42,7 +44,6 @@ export class LifeCell {
   ) {
     this.lifecycle = lifecycle;
     this._midi = midi;
-    this._duration = duration;
     this._power = power;
     this._pan = pan;
     this.entity = {
@@ -50,6 +51,9 @@ export class LifeCell {
       gain: powerToGain(this._power),
       pan: this._pan,
     };
+
+    this.duration = duration;
+    this.protection = false;
   }
 
   get midi(): number {
@@ -79,14 +83,6 @@ export class LifeCell {
     this.pushEntityFromSources();
   }
 
-  get duration(): number {
-    return this._duration;
-  }
-
-  set duration(v: number) {
-    this._duration = v;
-  }
-
   private pushEntityFromSources(): void {
     this.entity.frequency = midiToFrequency(this._midi);
     this.entity.gain = powerToGain(this._power);
@@ -111,7 +107,7 @@ export class LifeCell {
    */
   tick(): void {
     this.lived += 1;
-    if (this.lived >= this.duration) void this.die();
+    if (this.lived >= this.duration && !this.protection) void this.die();
   }
 
   /** Register voice, join lifecycle set. */

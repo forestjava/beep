@@ -4,18 +4,21 @@ import { LifeCell } from "./LifeCell";
 import { getEntropy } from "./consonanse";
 import { randomEntropyIndex } from "./weights";
 
+// defaults
 import { DURATION_DEFAULT, TICK_INTERVAL_DEFAULT, CHANNELS_DEFAULT, ENTROPY_THRESHOLD_DEFAULT, PIANO_SEMITONE_MIN, PIANO_SEMITONE_MAX } from "../defaults";
-
 
 export class Life implements LifeRegistry<LifeCell> {
   private readonly active = new Set<LifeCell>();
   private timer: ReturnType<typeof setInterval> | null = null;
+
+  // settings
   private tickInterval = TICK_INTERVAL_DEFAULT;
   private duration = DURATION_DEFAULT;
   private channels = CHANNELS_DEFAULT;
   private entropyThreshold = ENTROPY_THRESHOLD_DEFAULT;
   private pianoSemitoneMin = PIANO_SEMITONE_MIN;
   private pianoSemitoneMax = PIANO_SEMITONE_MAX;
+
   /** Предыдущая выбранная MIDI при спавне; первая нота равномерно случайная, далее — по энтропии. */
   private currentKey: number | null = null;
 
@@ -127,9 +130,11 @@ export class Life implements LifeRegistry<LifeCell> {
       for (const peer of peers) {
         if (team.includes(peer)) {
           peer.boost(this.consonantBoostWeight(teamEntropy));
+          peer.protection = true;
         } else {
           // const xEntropy = getEntropy(peer.midi, ...team.map((t) => t.midi));
           // peer.penalty(this.dissonantPenaltyWeight(xEntropy));
+          peer.protection = false;
         }
       }
 
