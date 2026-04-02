@@ -1,12 +1,10 @@
 import { useState } from "react";
 import { RotaryKnob } from "../RotaryKnob";
 import { beep } from "../../BeepPlayer";
-
-const CHANNELS_SCALE = 16;
-const CHANNELS_MIN = 16;
+import { CHANNELS_SCALE, CHANNELS_MIN, CHANNELS_DEFAULT } from "../../defaults";
 
 export function MaxChannelsKnob() {
-  const [value, setValue] = useState(CHANNELS_MIN);
+  const [value, setValue] = useState(CHANNELS_DEFAULT);
 
   return (
     <div className="knob-row">

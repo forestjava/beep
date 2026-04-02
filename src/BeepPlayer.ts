@@ -8,11 +8,11 @@ export class BeepPlayer {
   }
 
   setMaxConcurrentEntities(value: number): void {
-    void value
+    this.life.setMaxConcurrentEntities(value);
   }
 
   setEntropyThreshold(value: number): void {
-    void value
+    this.life.setEntropyThreshold(value);
   }
 
   setDuration(value: number): void {
@@ -20,8 +20,7 @@ export class BeepPlayer {
   }
 
   setPianoRange(minSemitone: number, maxSemitone: number): void {
-    void minSemitone
-    void maxSemitone
+    this.life.setPianoRange(minSemitone, maxSemitone);
   }
 
   async play(): Promise<void> {

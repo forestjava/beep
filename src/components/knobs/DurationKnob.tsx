@@ -3,7 +3,6 @@ import { RotaryKnob } from "../RotaryKnob";
 import { beep } from "../../BeepPlayer";
 import { DURATION_SCALE, DURATION_MIN, DURATION_DEFAULT } from "../../defaults";
 
-
 export function DurationKnob() {
   const [value, setValue] = useState(DURATION_DEFAULT);
 

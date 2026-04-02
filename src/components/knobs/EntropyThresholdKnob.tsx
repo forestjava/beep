@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { RotaryKnob } from "../RotaryKnob";
 import { beep } from "../../BeepPlayer";
+import { ENTROPY_THRESHOLD_DEFAULT } from "../../defaults";
 
 export function EntropyThresholdKnob() {
-  const [value, setValue] = useState(256);
+  const [value, setValue] = useState(ENTROPY_THRESHOLD_DEFAULT);
 
   return (
     <div className="knob-row">
