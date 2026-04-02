@@ -50,6 +50,7 @@ export class Life implements LifeRegistry<LifeCell> {
     return (this.entropyThreshold - raw) / this.entropyThreshold;
   }
 
+  // @ts-expect-error reserved for dissonance weighting
   private dissonantPenaltyWeight(raw: number): number {
     return raw / this.entropyThreshold;
   }
