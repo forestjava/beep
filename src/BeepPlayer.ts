@@ -35,6 +35,10 @@ export class BeepPlayer {
     await this.life.shutdown()
   }
 
+  subscribe(log: (line: string) => void): void {
+    this.life.subscribe(log);
+  }
+
 }
 
 export const beep = new BeepPlayer();

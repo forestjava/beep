@@ -1,6 +1,6 @@
 export const TICK_INTERVAL_SCALE = 1000;
-export const TICK_INTERVAL_MIN = 40;
-export const TICK_INTERVAL_DEFAULT = 200;
+export const TICK_INTERVAL_MIN = 20;
+export const TICK_INTERVAL_DEFAULT = 20;
 
 export const CHANNELS_SCALE = 16;
 export const CHANNELS_MIN = 16;

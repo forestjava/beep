@@ -10,6 +10,7 @@ import { DURATION_DEFAULT, TICK_INTERVAL_DEFAULT, CHANNELS_DEFAULT, ENTROPY_THRE
 export class Life implements LifeRegistry<LifeCell> {
   private readonly active = new Set<LifeCell>();
   private timer: ReturnType<typeof setInterval> | null = null;
+  private log: ((line: string) => void) | null = null;
 
   // settings
   private tickInterval = TICK_INTERVAL_DEFAULT;
@@ -46,13 +47,8 @@ export class Life implements LifeRegistry<LifeCell> {
     return best;
   }
 
-  private consonantBoostWeight(raw: number): number {
+  private consonantWeight(raw: number): number {
     return (this.entropyThreshold - raw) / this.entropyThreshold;
-  }
-
-  // @ts-expect-error reserved for dissonance weighting
-  private dissonantPenaltyWeight(raw: number): number {
-    return raw / this.entropyThreshold;
   }
 
   /** Первая нота — равномерно по диапазону клавиш; далее — взвешенный выбор через {@link randomEntropyIndex} относительно предыдущей. */
@@ -77,11 +73,6 @@ export class Life implements LifeRegistry<LifeCell> {
    * re-meets each unordered pair among those peers (so updated gain/power/duration propagate), then spawns it.
    */
   async spawnRandomCell(): Promise<void> {
-    while (this.active.size >= this.channels) {
-      const victim = this.pickWeakestCell();
-      if (!victim) break;
-      await victim.die();
-    }
 
     const peers = [...this.active];
 
@@ -89,7 +80,7 @@ export class Life implements LifeRegistry<LifeCell> {
       this,
       this.pickNextSpawnMidi(),
       Math.random() * (this.duration / this.tickInterval),
-      0,
+      0, // Math.random(),
       Math.random() * 2 - 1,
     );
 
@@ -122,24 +113,35 @@ export class Life implements LifeRegistry<LifeCell> {
       const acceptedIndex = steps.filter((s) => s.accepted).length - 1;
       const teamEntropy = steps[acceptedIndex].chordEntropy;
 
-      // console.log("[Life] team", {
-      //   teamSize: team.length,
-      //   teamEntropy: teamEntropy.toFixed(4),
-      // });
-
       team.push(cell);
+      const weight = this.consonantWeight(teamEntropy);
+      // const avgPower = team.reduce((acc, member) => acc + member.power, 0) / team.length;
+      // const avgDuration = team.reduce((acc, member) => acc + member.duration, 0) / team.length;
       for (const peer of peers) {
         if (team.includes(peer)) {
-          peer.boost(this.consonantBoostWeight(teamEntropy));
-          peer.protection = true;
+          peer.power = weight;
+          // peer.power = Math.max(peer.power, avgPower);
+          // peer.duration = Math.max(peer.duration, avgDuration) + 1;
+          // peer.power = (avgPower + weight) / 2;
+          // peer.duration = peer.duration + 1;
         } else {
-          // const xEntropy = getEntropy(peer.midi, ...team.map((t) => t.midi));
-          // peer.penalty(this.dissonantPenaltyWeight(xEntropy));
-          peer.protection = false;
+          return;
+          // peer.duration = peer.duration / 2;
+          //peer.duration = peer.duration - this.tickInterval / 2;
         }
       }
+      this.log?.(`${this.active.size + 1} channels, ${team.length} team, ${teamEntropy.toFixed(0)} entropy, ${weight.toFixed(3)} boost, [${team.map((member) => member.power.toFixed(3))}], [${team.map((member) => member.duration.toFixed(0))}]`);
 
       await cell.spawn();
+    }
+  }
+
+
+  private async killWeakestCell(): Promise<void> {
+    while (this.active.size >= this.channels) {
+      const weakest = this.pickWeakestCell();
+      if (weakest) await weakest.die();
+      this.log?.(`killing up to ${this.active.size} channels`);
     }
   }
 
@@ -147,6 +149,7 @@ export class Life implements LifeRegistry<LifeCell> {
    * Один такт: спавн новой клетки, затем {@link LifeCell.tick} для всех активных.
    */
   async tick(): Promise<void> {
+    await this.killWeakestCell();
     await this.spawnRandomCell();
     for (const cell of [...this.active]) {
       cell.tick();
@@ -203,6 +206,10 @@ export class Life implements LifeRegistry<LifeCell> {
   setPianoRange(minSemitone: number, maxSemitone: number): void {
     this.pianoSemitoneMin = minSemitone;
     this.pianoSemitoneMax = maxSemitone;
+  }
+
+  subscribe(log: (line: string) => void): void {
+    this.log = log;
   }
 
 }

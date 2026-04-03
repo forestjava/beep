@@ -269,3 +269,54 @@ body {
   display: block;
   filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.35));
 }
+
+.desktop-shell {
+  display: flex;
+  min-height: 100dvh;
+  height: 100dvh;
+  align-items: stretch;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+.desktop-mobile-column {
+  flex: 0 0 auto;
+  min-height: 0;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  overflow-y: auto;
+  border-right: 1px solid var(--metal-dark);
+  background: var(--panel);
+}
+
+.desktop-extended {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  padding: 1.5rem;
+  background: var(--panel-elevated);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.terminal {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 0.75rem 1rem;
+  border-radius: 6px;
+  border: 1px solid var(--metal-dark);
+  background: #0a0a0f;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  line-height: 1.45;
+  color: #c8c8d4;
+}
+
+.terminal-line {
+  white-space: pre-wrap;
+  word-break: break-word;
+}

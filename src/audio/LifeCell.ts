@@ -90,18 +90,6 @@ export class LifeCell {
     if (this.spawned) void this.lifecycle.update(this,);
   }
 
-  public boost(boostWeight: number): void {
-    this.power = boostWeight;
-    //this.duration = this.duration * (1 + boostWeight);
-    //console.log("[LifeCell] boost", boostWeight, this.power);
-  }
-
-  public penalty(penaltyWeight: number): void {
-    this.power /= penaltyWeight;
-    //this.duration /= penaltyWeight;
-    //console.log("[LifeCell] penalty", penaltyWeight, this.power);
-  }
-
   /**
    * Один глобальный такт: увеличивает счётчик тактов и при достижении duration завершает клетку.
    */
