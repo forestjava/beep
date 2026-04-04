@@ -54,7 +54,7 @@ export class LifeCell {
     this._power = power;
     this.powerTarget = power;
     this._pan = pan;
-    this.powerDeferralBlend = clamp(powerDeferralBlend, 0, 1);
+    this.powerDeferralBlend = powerDeferralBlend;
     this.entity = {
       frequency: midiToFrequency(this._midi),
       gain: powerToGain(this._power),
@@ -88,12 +88,12 @@ export class LifeCell {
   }
 
   set pan(v: number) {
-    this._pan = clamp(v, -1, 1);
+    this._pan = v;
     this.pushEntityFromSources();
   }
 
   setPowerDeferralBlend(v: number): void {
-    this.powerDeferralBlend = clamp(v, 0, 1);
+    this.powerDeferralBlend = v;
   }
 
   private pushEntityFromSources(): void {

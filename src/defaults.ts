@@ -3,7 +3,7 @@ export const TICK_INTERVAL_MIN = 20;
 export const TICK_INTERVAL_DEFAULT = 200;
 
 export const CHANNELS_SCALE = 16;
-export const CHANNELS_MIN = 16;
+export const CHANNELS_MIN = 4;
 export const CHANNELS_DEFAULT = 16;
 
 export const ENTROPY_THRESHOLD_DEFAULT = 256;

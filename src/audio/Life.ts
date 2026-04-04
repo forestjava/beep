@@ -82,7 +82,7 @@ export class Life implements LifeRegistry<LifeCell> {
       this,
       this.pickNextSpawnMidi(),
       Math.random() * (this.duration / this.tickInterval),
-      0, // Math.random(),
+      0, //Math.random(),
       Math.random() * 2 - 1,
       this.powerDeferralBlend,
     );
