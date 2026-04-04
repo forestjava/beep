@@ -19,7 +19,6 @@ export default function Terminal({ lines }: TerminalProps) {
         <div
           key={`${i}-${line.slice(0, 48)}`}
           className="terminal-line"
-          style={{ whiteSpace: 'normal' }}
         >
           {line.replace(/\r?\n/g, ' ')}
         </div>

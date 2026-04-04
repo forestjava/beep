@@ -2,7 +2,7 @@ import type { HarmonicEntity } from "./HarmonicEntity";
 import { GAIN_SMOOTH_TIME_DEFAULT } from "../defaults";
 
 /** Wall-clock slack so timers align with audio render timeline, in seconds. */
-const SLACK_TIME_MS = 10;
+const SLACK_TIME_MS = 100;
 
 function delay(ms: number): Promise<void> {
   return new Promise((resolve) => {
@@ -31,6 +31,7 @@ export class HarmonicEntityPlayer {
 
   setGainSmoothTimeMs(ms: number): void {
     this.gainSmoothTimeSec = ms / 1000;
+    console.log("[HarmonicEntityPlayer] setGainSmoothTimeMs", ms, this.gainSmoothTimeSec);
   }
 
   /**
@@ -76,10 +77,11 @@ export class HarmonicEntityPlayer {
     const t0 = this.audioContext.currentTime;
     const gainNode = new GainNode(this.audioContext);
     gainNode.gain.setValueAtTime(0, t0);
-    gainNode.gain.linearRampToValueAtTime(
-      entity.gain,
-      t0 + this.gainSmoothTimeSec,
-    );
+    // gainNode.gain.linearRampToValueAtTime(
+    //   entity.gain,
+    //   t0 + this.gainSmoothTimeSec,
+    // );
+    gainNode.gain.setValueCurveAtTime([0, entity.gain], t0, this.gainSmoothTimeSec);
     const oscillator = new OscillatorNode(this.audioContext, {
       frequency: entity.frequency,
       type: "sine",
@@ -108,8 +110,9 @@ export class HarmonicEntityPlayer {
     const t0 = this.audioContext.currentTime;
     const g = voice.gainNode.gain;
     g.cancelScheduledValues(t0);
-    g.setValueAtTime(g.value, t0);
-    g.linearRampToValueAtTime(0, t0 + this.gainSmoothTimeSec);
+    //g.setValueAtTime(g.value, t0);
+    //g.linearRampToValueAtTime(0, t0 + this.gainSmoothTimeSec);
+    g.setValueCurveAtTime([g.value, 0], t0, this.gainSmoothTimeSec);
 
     await delay(this.gainSmoothTimeSec + SLACK_TIME_MS);
 
@@ -132,22 +135,25 @@ export class HarmonicEntityPlayer {
     const g = voice.gainNode.gain;
     if (entity.gain !== g.value) {
       g.cancelScheduledValues(t0);
-      g.setValueAtTime(g.value, t0);
-      g.linearRampToValueAtTime(entity.gain, t0 + this.gainSmoothTimeSec);
+      //g.setValueAtTime(g.value, t0);
+      //g.linearRampToValueAtTime(entity.gain, t0 + this.gainSmoothTimeSec);
+      g.setValueCurveAtTime([g.value, entity.gain], t0, this.gainSmoothTimeSec);
     }
 
     const f = voice.oscillator.frequency;
     if (entity.frequency !== f.value) {
       f.cancelScheduledValues(t0);
-      f.setValueAtTime(f.value, t0);
-      f.linearRampToValueAtTime(entity.frequency, t0 + this.gainSmoothTimeSec);
+      //f.setValueAtTime(f.value, t0);
+      //f.linearRampToValueAtTime(entity.frequency, t0 + this.gainSmoothTimeSec);
+      f.setValueCurveAtTime([f.value, entity.frequency], t0, this.gainSmoothTimeSec);
     }
 
     const p = voice.panner.pan;
     if (entity.pan !== p.value) {
       p.cancelScheduledValues(t0);
-      p.setValueAtTime(p.value, t0);
-      p.linearRampToValueAtTime(entity.pan, t0 + this.gainSmoothTimeSec);
+      //p.setValueAtTime(p.value, t0);
+      //p.linearRampToValueAtTime(entity.pan, t0 + this.gainSmoothTimeSec);
+      p.setValueCurveAtTime([p.value, entity.pan], t0, this.gainSmoothTimeSec);
     }
 
     await delay(this.gainSmoothTimeSec + SLACK_TIME_MS);

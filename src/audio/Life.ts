@@ -1,6 +1,7 @@
 import type { LifeRegistry } from "./LifeRegistry";
 import { HarmonicEntityPlayer } from "./HarmonicEntityPlayer";
 import { LifeCell } from "./LifeCell";
+import { findGroupGreedy } from "./findGroupGreedy";
 import { getEntropy } from "./consonanse";
 import { randomEntropyIndex } from "./weights";
 
@@ -89,51 +90,19 @@ export class Life implements LifeRegistry<LifeCell> {
       return
     };
 
-    const sorted = peers.sort((a, b) => getEntropy(cell.midi, a.midi) - getEntropy(cell.midi, b.midi));
-    const team: LifeCell[] = [];
+    const { team, teamEntropy } = findGroupGreedy([...peers, cell], this.entropyThreshold);
 
-    const steps: Array<{
-      chordEntropy: number;
-      accepted: boolean;
-    }> = [];
-
-    for (const peer of sorted) {
-      const chordEntropy = getEntropy(cell.midi, ...team.map((t) => t.midi), peer.midi);
-      const accepted = chordEntropy < this.entropyThreshold;
-      steps.push({
-        chordEntropy,
-        accepted,
-      });
-      if (accepted) team.push(peer);
-      else break;
-    }
-
-    const hasFriends = steps.filter((s) => s.accepted).length > 0;
-    if (hasFriends) {
-      const acceptedIndex = steps.filter((s) => s.accepted).length - 1;
-      const teamEntropy = steps[acceptedIndex].chordEntropy;
-
-      team.push(cell);
-      const weight = this.consonantWeight(teamEntropy);
-      // const avgPower = team.reduce((acc, member) => acc + member.power, 0) / team.length;
-      // const avgDuration = team.reduce((acc, member) => acc + member.duration, 0) / team.length;
-      for (const peer of peers) {
-        if (team.includes(peer)) {
-          peer.power = weight;
-          // peer.power = Math.max(peer.power, avgPower);
-          // peer.duration = Math.max(peer.duration, avgDuration) + 1;
-          // peer.power = (avgPower + weight) / 2;
-          // peer.duration = peer.duration + 1;
-        } else {
-          peer.power = 0;
-          // peer.duration = peer.duration / 2;
-          //peer.duration = peer.duration - this.tickInterval / 2;
-        }
+    const weight = this.consonantWeight(teamEntropy);
+    for (const peer of peers) {
+      if (team.includes(peer)) {
+        peer.power = weight;
+      } else {
+        peer.power = 0;
       }
-      this.log?.(`${this.active.size + 1} channels, ${team.length} team, ${teamEntropy.toFixed(0)} entropy, ${weight.toFixed(3)} boost, [${team.map((member) => member.power.toFixed(3))}], [${team.map((member) => member.duration.toFixed(0))}]`);
-
-      await cell.spawn();
     }
+    this.log?.(`${this.active.size + 1} channels, ${team.length} team, ${teamEntropy.toFixed(0)} entropy, ${weight.toFixed(3)} boost, [${team.map((member) => member.power.toFixed(3))}], [${team.map((member) => member.duration.toFixed(0))}]`);
+
+    await cell.spawn();
   }
 
 

@@ -2,7 +2,7 @@ import type { HarmonicEntity } from "./HarmonicEntity";
 import type { LifeRegistry } from "./LifeRegistry";
 
 const GAIN_MIN = 0;
-const GAIN_MAX = 0.3;
+const GAIN_MAX = 0.5;
 
 function clamp(x: number, lo: number, hi: number): number {
   return Math.min(hi, Math.max(lo, x));
