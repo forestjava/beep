@@ -4,6 +4,7 @@ import {
   EntropyThresholdKnob,
   GainSmoothTimeKnob,
   MaxChannelsKnob,
+  PowerDeferralBlendKnob,
   TickIntervalKnob,
 } from './components/knobs'
 import { PianoRangeSlider } from './components/PianoRangeSlider'
@@ -39,6 +40,7 @@ export default function MobileBeep() {
         <EntropyThresholdKnob />
         <DurationKnob />
         <GainSmoothTimeKnob />
+        <PowerDeferralBlendKnob />
       </div>
 
       <div className="piano-block">

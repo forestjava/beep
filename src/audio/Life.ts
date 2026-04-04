@@ -6,7 +6,7 @@ import { getEntropy } from "./consonanse";
 import { randomEntropyIndex } from "./weights";
 
 // defaults
-import { DURATION_DEFAULT, TICK_INTERVAL_DEFAULT, CHANNELS_DEFAULT, ENTROPY_THRESHOLD_DEFAULT, PIANO_SEMITONE_MIN, PIANO_SEMITONE_MAX } from "../defaults";
+import { DURATION_DEFAULT, TICK_INTERVAL_DEFAULT, CHANNELS_DEFAULT, ENTROPY_THRESHOLD_DEFAULT, PIANO_SEMITONE_MIN, PIANO_SEMITONE_MAX, POWER_DEFERRAL_BLEND_DEFAULT } from "../defaults";
 
 export class Life implements LifeRegistry<LifeCell> {
   private readonly active = new Set<LifeCell>();
@@ -20,6 +20,7 @@ export class Life implements LifeRegistry<LifeCell> {
   private entropyThreshold = ENTROPY_THRESHOLD_DEFAULT;
   private pianoSemitoneMin = PIANO_SEMITONE_MIN;
   private pianoSemitoneMax = PIANO_SEMITONE_MAX;
+  private powerDeferralBlend = POWER_DEFERRAL_BLEND_DEFAULT;
 
   /** Предыдущая выбранная MIDI при спавне; первая нота равномерно случайная, далее — по энтропии. */
   private currentKey: number | null = null;
@@ -83,6 +84,7 @@ export class Life implements LifeRegistry<LifeCell> {
       Math.random() * (this.duration / this.tickInterval),
       0, // Math.random(),
       Math.random() * 2 - 1,
+      this.powerDeferralBlend,
     );
 
     if (peers.length == 0) {
@@ -95,9 +97,9 @@ export class Life implements LifeRegistry<LifeCell> {
     const weight = this.consonantWeight(teamEntropy);
     for (const peer of peers) {
       if (team.includes(peer)) {
-        peer.power = weight;
+        peer.powerTarget = weight;
       } else {
-        peer.power = 0;
+        peer.powerTarget = 0;
       }
     }
     this.log?.(`${this.active.size + 1} channels, ${team.length} team, ${teamEntropy.toFixed(0)} entropy, ${weight.toFixed(3)} boost, [${team.map((member) => member.power.toFixed(3))}], [${team.map((member) => member.duration.toFixed(0))}]`);
@@ -174,6 +176,10 @@ export class Life implements LifeRegistry<LifeCell> {
 
   setGainSmoothTimeMs(value: number): void {
     this.player.setGainSmoothTimeMs(value);
+  }
+
+  setPowerDeferralBlend(value: number): void {
+    this.powerDeferralBlend = value;
   }
 
   setPianoRange(minSemitone: number, maxSemitone: number): void {

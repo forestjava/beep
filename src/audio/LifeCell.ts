@@ -27,6 +27,12 @@ export class LifeCell {
   private _power: number;
   private _pan: number;
 
+  /** Доля разницы `powerTarget - power` за один тик; задаётся извне (крутилка → {@link Life.setPowerDeferralBlend}). */
+  private powerDeferralBlend: number;
+
+  /** Целевой вес; текущий `power` догоняет её в {@link tick}. */
+  powerTarget: number;
+
   public duration: number;
   public protection: boolean;
 
@@ -41,11 +47,14 @@ export class LifeCell {
     duration: number,
     power: number,
     pan: number,
+    powerDeferralBlend: number,
   ) {
     this.lifecycle = lifecycle;
     this._midi = midi;
     this._power = power;
+    this.powerTarget = power;
     this._pan = pan;
+    this.powerDeferralBlend = clamp(powerDeferralBlend, 0, 1);
     this.entity = {
       frequency: midiToFrequency(this._midi),
       gain: powerToGain(this._power),
@@ -83,19 +92,23 @@ export class LifeCell {
     this.pushEntityFromSources();
   }
 
+  setPowerDeferralBlend(v: number): void {
+    this.powerDeferralBlend = clamp(v, 0, 1);
+  }
+
   private pushEntityFromSources(): void {
     this.entity.frequency = midiToFrequency(this._midi);
     this.entity.gain = powerToGain(this._power);
     this.entity.pan = this._pan;
-    if (this.spawned) void this.lifecycle.update(this,);
+    if (this.spawned) void this.lifecycle.update(this);
   }
 
-  /**
-   * Один глобальный такт: увеличивает счётчик тактов и при достижении duration завершает клетку.
-   */
   tick(): void {
     this.lived += 1;
     if (this.lived >= this.duration && !this.protection) void this.die();
+
+    const delta = this.powerTarget - this.power;
+    this.power += delta * this.powerDeferralBlend;
   }
 
   /** Register voice, join lifecycle set. */

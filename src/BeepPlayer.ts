@@ -23,6 +23,10 @@ export class BeepPlayer {
     this.life.setGainSmoothTimeMs(value);
   }
 
+  setPowerDeferralBlend(value: number): void {
+    this.life.setPowerDeferralBlend(value);
+  }
+
   setPianoRange(minSemitone: number, maxSemitone: number): void {
     this.life.setPianoRange(minSemitone, maxSemitone);
   }

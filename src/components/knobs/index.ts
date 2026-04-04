@@ -3,3 +3,4 @@ export { MaxChannelsKnob } from "./MaxChannelsKnob";
 export { EntropyThresholdKnob } from "./EntropyThresholdKnob";
 export { DurationKnob } from "./DurationKnob";
 export { GainSmoothTimeKnob } from "./GainSmoothTimeKnob";
+export { PowerDeferralBlendKnob } from "./PowerDeferralBlendKnob";

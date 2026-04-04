@@ -31,7 +31,6 @@ export class HarmonicEntityPlayer {
 
   setGainSmoothTimeMs(ms: number): void {
     this.gainSmoothTimeSec = ms / 1000;
-    console.log("[HarmonicEntityPlayer] setGainSmoothTimeMs", ms, this.gainSmoothTimeSec);
   }
 
   /**
