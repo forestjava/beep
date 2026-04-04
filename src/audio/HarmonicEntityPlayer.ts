@@ -1,13 +1,12 @@
 import type { HarmonicEntity } from "./HarmonicEntity";
+import { GAIN_SMOOTH_TIME_DEFAULT } from "../defaults";
 
-/** Linear gain smoothing for attack (0 → level) and release (level → 0), in seconds. */
-const SMOOTH_TIME = 0.1; // 0.03;
 /** Wall-clock slack so timers align with audio render timeline, in seconds. */
-const SLACK_TIME = 0.01;
+const SLACK_TIME_MS = 10;
 
-function delay(s: number): Promise<void> {
+function delay(ms: number): Promise<void> {
   return new Promise((resolve) => {
-    setTimeout(resolve, s * 1000);
+    setTimeout(resolve, ms);
   });
 }
 
@@ -24,9 +23,14 @@ type Voice = {
 export class HarmonicEntityPlayer {
   readonly audioContext: AudioContext;
   private readonly voices = new Map<HarmonicEntity, Voice>();
+  private gainSmoothTimeSec = GAIN_SMOOTH_TIME_DEFAULT / 1000;
 
   constructor(audioContext = new AudioContext()) {
     this.audioContext = audioContext;
+  }
+
+  setGainSmoothTimeMs(ms: number): void {
+    this.gainSmoothTimeSec = ms / 1000;
   }
 
   /**
@@ -74,7 +78,7 @@ export class HarmonicEntityPlayer {
     gainNode.gain.setValueAtTime(0, t0);
     gainNode.gain.linearRampToValueAtTime(
       entity.gain,
-      t0 + SMOOTH_TIME,
+      t0 + this.gainSmoothTimeSec,
     );
     const oscillator = new OscillatorNode(this.audioContext, {
       frequency: entity.frequency,
@@ -88,7 +92,7 @@ export class HarmonicEntityPlayer {
     oscillator.start();
 
     this.voices.set(entity, { oscillator, gainNode, panner });
-    await delay(SMOOTH_TIME + SLACK_TIME);
+    await delay(this.gainSmoothTimeSec + SLACK_TIME_MS);
   }
 
   /**
@@ -105,9 +109,9 @@ export class HarmonicEntityPlayer {
     const g = voice.gainNode.gain;
     g.cancelScheduledValues(t0);
     g.setValueAtTime(g.value, t0);
-    g.linearRampToValueAtTime(0, t0 + SMOOTH_TIME);
+    g.linearRampToValueAtTime(0, t0 + this.gainSmoothTimeSec);
 
-    await delay(SMOOTH_TIME + SLACK_TIME);
+    await delay(this.gainSmoothTimeSec + SLACK_TIME_MS);
 
     try {
       voice.oscillator.stop();
@@ -120,7 +124,7 @@ export class HarmonicEntityPlayer {
   }
 
   /** Push current {@link HarmonicEntity.gain}, {@link HarmonicEntity.frequency}, {@link HarmonicEntity.pan} into the graph. */
-  async apply(entity: HarmonicEntity, smoothTime = SMOOTH_TIME): Promise<void> {
+  async apply(entity: HarmonicEntity): Promise<void> {
     const voice = this.voices.get(entity);
     if (!voice) return;
 
@@ -129,24 +133,24 @@ export class HarmonicEntityPlayer {
     if (entity.gain !== g.value) {
       g.cancelScheduledValues(t0);
       g.setValueAtTime(g.value, t0);
-      g.linearRampToValueAtTime(entity.gain, t0 + smoothTime);
+      g.linearRampToValueAtTime(entity.gain, t0 + this.gainSmoothTimeSec);
     }
 
     const f = voice.oscillator.frequency;
     if (entity.frequency !== f.value) {
       f.cancelScheduledValues(t0);
       f.setValueAtTime(f.value, t0);
-      f.linearRampToValueAtTime(entity.frequency, t0 + smoothTime);
+      f.linearRampToValueAtTime(entity.frequency, t0 + this.gainSmoothTimeSec);
     }
 
     const p = voice.panner.pan;
     if (entity.pan !== p.value) {
       p.cancelScheduledValues(t0);
       p.setValueAtTime(p.value, t0);
-      p.linearRampToValueAtTime(entity.pan, t0 + smoothTime);
+      p.linearRampToValueAtTime(entity.pan, t0 + this.gainSmoothTimeSec);
     }
 
-    await delay(smoothTime + SLACK_TIME);
+    await delay(this.gainSmoothTimeSec + SLACK_TIME_MS);
   }
 
   /** Remove all voices and close the context. */

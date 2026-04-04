@@ -2,6 +2,7 @@ import { useState } from 'react'
 import {
   DurationKnob,
   EntropyThresholdKnob,
+  GainSmoothTimeKnob,
   MaxChannelsKnob,
   TickIntervalKnob,
 } from './components/knobs'
@@ -37,6 +38,7 @@ export default function MobileBeep() {
         <MaxChannelsKnob />
         <EntropyThresholdKnob />
         <DurationKnob />
+        <GainSmoothTimeKnob />
       </div>
 
       <div className="piano-block">

@@ -19,6 +19,10 @@ export class BeepPlayer {
     this.life.setDuration(value);
   }
 
+  setGainSmoothTimeMs(value: number): void {
+    this.life.setGainSmoothTimeMs(value);
+  }
+
   setPianoRange(minSemitone: number, maxSemitone: number): void {
     this.life.setPianoRange(minSemitone, maxSemitone);
   }

@@ -125,7 +125,7 @@ export class Life implements LifeRegistry<LifeCell> {
           // peer.power = (avgPower + weight) / 2;
           // peer.duration = peer.duration + 1;
         } else {
-          return;
+          peer.power = 0;
           // peer.duration = peer.duration / 2;
           //peer.duration = peer.duration - this.tickInterval / 2;
         }
@@ -201,6 +201,10 @@ export class Life implements LifeRegistry<LifeCell> {
 
   setDuration(value: number): void {
     this.duration = value;
+  }
+
+  setGainSmoothTimeMs(value: number): void {
+    this.player.setGainSmoothTimeMs(value);
   }
 
   setPianoRange(minSemitone: number, maxSemitone: number): void {
