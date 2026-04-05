@@ -1,5 +1,11 @@
 import type { HarmonicEntity } from "./HarmonicEntity";
-import { GAIN_SMOOTH_TIME_DEFAULT } from "../defaults";
+import { loadSampleBuffer, midiToSoundfontFilename } from "./soundfontSample";
+import {
+  GAIN_SMOOTH_TIME_DEFAULT,
+  SAMPLED_INSTRUMENT_BASE_URL,
+  SAMPLED_INSTRUMENT_FILE_EXT,
+  USE_SAMPLED_HARMONIC,
+} from "../defaults";
 
 /** Wall-clock slack so timers align with audio render timeline, in seconds. */
 const SLACK_TIME_MS = 100;
@@ -14,19 +20,28 @@ function delay(ms: number): Promise<void> {
   });
 }
 
-type Voice = {
-  oscillator: OscillatorNode;
-  gainNode: GainNode;
-  panner: StereoPannerNode;
-};
+type Voice =
+  | {
+      kind: "Oscillator";
+      sourceNode: OscillatorNode;
+      gainNode: GainNode;
+      panNode: StereoPannerNode;
+    }
+  | {
+      kind: "Sample";
+      sourceNode: AudioBufferSourceNode;
+      gainNode: GainNode;
+      panNode: StereoPannerNode;
+    };
 
 /**
- * Routes {@link HarmonicEntity} instances through Web Audio: one oscillator + gain per entity.
- * Entities are keyed by object identity so the same reference can be updated or removed later.
+ * Routes {@link HarmonicEntity} instances through Web Audio: per entity either an oscillator or a
+ * looped soundfont sample, plus gain and stereo pan. Entities are keyed by object identity.
  */
 export class HarmonicEntityPlayer {
   readonly audioContext: AudioContext;
   private readonly voices = new Map<HarmonicEntity, Voice>();
+  private readonly sampleBufferPromises = new Map<number, Promise<AudioBuffer>>();
   private gainSmoothTimeMs = GAIN_SMOOTH_TIME_DEFAULT;
 
   constructor(audioContext = new AudioContext()) {
@@ -63,8 +78,40 @@ export class HarmonicEntityPlayer {
     return [...this.voices.keys()];
   }
 
+  private sampleUrlForMidi(midi: number): string {
+    const base = SAMPLED_INSTRUMENT_BASE_URL.endsWith("/")
+      ? SAMPLED_INSTRUMENT_BASE_URL
+      : `${SAMPLED_INSTRUMENT_BASE_URL}/`;
+    return `${base}${midiToSoundfontFilename(midi, SAMPLED_INSTRUMENT_FILE_EXT)}`;
+  }
+
+  private async loadSampleBufferCached(midi: number): Promise<AudioBuffer | null> {
+    let promise = this.sampleBufferPromises.get(midi);
+    if (!promise) {
+      promise = loadSampleBuffer(this.audioContext, this.sampleUrlForMidi(midi));
+      this.sampleBufferPromises.set(midi, promise);
+    }
+    try {
+      return await promise;
+    } catch (err) {
+      this.sampleBufferPromises.delete(midi);
+      console.error("HarmonicEntityPlayer: sample load failed", { midi, err });
+      return null;
+    }
+  }
+
+  private connectVoiceChain(
+    sourceNode: AudioNode,
+    gainNode: GainNode,
+    panNode: StereoPannerNode,
+  ): void {
+    sourceNode.connect(gainNode);
+    gainNode.connect(panNode);
+    panNode.connect(this.audioContext.destination);
+  }
+
   /**
-   * Register an entity: wire nodes, start the oscillator, and track for sync/removal.
+   * Register an entity: wire nodes, start the source, and track for sync/removal.
    * Requires {@link state} `running` (e.g. after {@link resume} from a user gesture).
    * Resolves after the attack fade has elapsed (wall clock).
    */
@@ -82,22 +129,47 @@ export class HarmonicEntityPlayer {
     if (entity.gain > 0) {
       gainNode.gain.setValueCurveAtTime([0, entity.gain], t0, this.gainSmoothTimeMs / 1000);
     }
-    const oscillator = new OscillatorNode(this.audioContext, {
-      frequency: midiToFrequency(entity.midi),
-    });
-    const panner = new StereoPannerNode(this.audioContext, { pan: entity.pan });
+    const panNode = new StereoPannerNode(this.audioContext, { pan: entity.pan });
 
-    oscillator.connect(gainNode);
-    gainNode.connect(panner);
-    panner.connect(this.audioContext.destination);
-    oscillator.start();
+    let voice: Voice;
 
-    this.voices.set(entity, { oscillator, gainNode, panner });
+    if (USE_SAMPLED_HARMONIC) {
+      const buffer = await this.loadSampleBufferCached(entity.midi);
+      if (buffer) {
+        const sourceNode = new AudioBufferSourceNode(this.audioContext, { buffer });
+        sourceNode.loop = true;
+        /*
+         * Full-buffer loop keeps the note sounding until remove(). If you hear clicks or the
+         * attack repeating, try tuning loopStart / loopEnd (sustain region), metadata-driven
+         * loop points, or separate sustain samples — not part of the minimal build.
+         */
+        sourceNode.playbackRate.value = 1;
+        this.connectVoiceChain(sourceNode, gainNode, panNode);
+        sourceNode.start();
+        voice = { kind: "Sample", sourceNode, gainNode, panNode };
+      } else {
+        const sourceNode = new OscillatorNode(this.audioContext, {
+          frequency: midiToFrequency(entity.midi),
+        });
+        this.connectVoiceChain(sourceNode, gainNode, panNode);
+        sourceNode.start();
+        voice = { kind: "Oscillator", sourceNode, gainNode, panNode };
+      }
+    } else {
+      const sourceNode = new OscillatorNode(this.audioContext, {
+        frequency: midiToFrequency(entity.midi),
+      });
+      this.connectVoiceChain(sourceNode, gainNode, panNode);
+      sourceNode.start();
+      voice = { kind: "Oscillator", sourceNode, gainNode, panNode };
+    }
+
+    this.voices.set(entity, voice);
     await delay(this.gainSmoothTimeMs);
   }
 
   /**
-   * Fade gain to zero, stop the oscillator, and disconnect both nodes — releases the voice fully.
+   * Fade gain to zero, stop the source, and disconnect nodes — releases the voice fully.
    * Idempotent if the entity is not registered. Resolves after the release fade (wall clock).
    */
   async remove(entity: HarmonicEntity): Promise<void> {
@@ -114,11 +186,14 @@ export class HarmonicEntityPlayer {
 
     await delay(this.gainSmoothTimeMs);
 
-    voice.oscillator.stop();
-    voice.oscillator.disconnect();
+    try {
+      voice.sourceNode.stop();
+    } catch {
+      /* already stopped */
+    }
+    voice.sourceNode.disconnect();
     voice.gainNode.disconnect();
-    voice.panner.disconnect();
-
+    voice.panNode.disconnect();
   }
 
   /** Push current {@link HarmonicEntity.gain} and {@link HarmonicEntity.pan} into the graph (pitch is not updated after {@link push}). */
@@ -133,7 +208,7 @@ export class HarmonicEntityPlayer {
       g.setValueCurveAtTime([g.value, entity.gain], t0, this.gainSmoothTimeMs / 1000);
     }
 
-    const p = voice.panner.pan;
+    const p = voice.panNode.pan;
     if (entity.pan !== p.value) {
       p.cancelScheduledValues(t0);
       p.setValueCurveAtTime([p.value, entity.pan], t0, this.gainSmoothTimeMs / 1000);

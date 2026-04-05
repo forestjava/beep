@@ -101,7 +101,7 @@ export class Life implements LifeRegistry<LifeCell> {
       const weight = this.consonantWeight(teamEntropy);
       for (const peer of peers) {
         if (team.includes(peer)) {
-          peer.powerTarget = weight;
+          peer.powerTarget = team.length * weight;
         } else {
           peer.powerTarget = 0;
         }
