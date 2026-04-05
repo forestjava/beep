@@ -8,10 +8,6 @@ function clamp(x: number, lo: number, hi: number): number {
   return Math.min(hi, Math.max(lo, x));
 }
 
-function midiToFrequency(midi: number): number {
-  return 440 * 2 ** ((midi - 69) / 12);
-}
-
 function powerToGain(power: number): number {
   return GAIN_MIN + clamp(power, 0, 1) * (GAIN_MAX - GAIN_MIN);
 }
@@ -56,7 +52,7 @@ export class LifeCell {
     this._pan = pan;
     this.powerDeferralBlend = powerDeferralBlend;
     this.entity = {
-      frequency: midiToFrequency(this._midi),
+      midi: this._midi,
       gain: powerToGain(this._power),
       pan: this._pan,
     };
@@ -97,7 +93,7 @@ export class LifeCell {
   }
 
   private pushEntityFromSources(): void {
-    this.entity.frequency = midiToFrequency(this._midi);
+    this.entity.midi = this._midi;
     this.entity.gain = powerToGain(this._power);
     this.entity.pan = this._pan;
     if (this.spawned) void this.lifecycle.update(this);

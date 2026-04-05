@@ -4,6 +4,10 @@ import { GAIN_SMOOTH_TIME_DEFAULT } from "../defaults";
 /** Wall-clock slack so timers align with audio render timeline, in seconds. */
 const SLACK_TIME_MS = 100;
 
+function midiToFrequency(midi: number): number {
+  return 440 * 2 ** ((midi - 69) / 12);
+}
+
 function delay(ms: number): Promise<void> {
   return new Promise((resolve) => {
     setTimeout(resolve, ms + SLACK_TIME_MS);
@@ -77,9 +81,10 @@ export class HarmonicEntityPlayer {
     const gainNode = new GainNode(this.audioContext, { gain: 0 });
     if (entity.gain > 0) {
       gainNode.gain.setValueCurveAtTime([0, entity.gain], t0, this.gainSmoothTimeMs / 1000);
-      console.log("push", [0, entity.gain.toFixed(3)]);
     }
-    const oscillator = new OscillatorNode(this.audioContext, { frequency: entity.frequency });
+    const oscillator = new OscillatorNode(this.audioContext, {
+      frequency: midiToFrequency(entity.midi),
+    });
     const panner = new StereoPannerNode(this.audioContext, { pan: entity.pan });
 
     oscillator.connect(gainNode);
@@ -116,7 +121,7 @@ export class HarmonicEntityPlayer {
 
   }
 
-  /** Push current {@link HarmonicEntity.gain}, {@link HarmonicEntity.frequency}, {@link HarmonicEntity.pan} into the graph. */
+  /** Push current {@link HarmonicEntity.gain} and {@link HarmonicEntity.pan} into the graph (pitch is not updated after {@link push}). */
   async apply(entity: HarmonicEntity): Promise<void> {
     const voice = this.voices.get(entity);
     if (!voice) return;
@@ -126,12 +131,6 @@ export class HarmonicEntityPlayer {
     if (entity.gain !== g.value) {
       g.cancelScheduledValues(t0);
       g.setValueCurveAtTime([g.value, entity.gain], t0, this.gainSmoothTimeMs / 1000);
-    }
-
-    const f = voice.oscillator.frequency;
-    if (entity.frequency !== f.value) {
-      f.cancelScheduledValues(t0);
-      f.setValueCurveAtTime([f.value, entity.frequency], t0, this.gainSmoothTimeMs / 1000);
     }
 
     const p = voice.panner.pan;

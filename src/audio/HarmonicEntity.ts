@@ -5,8 +5,8 @@
 export type HarmonicEntity = {
   /** Linear gain applied before the destination (typical range ~0–1). */
   gain: number;
-  /** Fundamental frequency in hertz. */
-  frequency: number;
+  /** MIDI note number (pitch is fixed for the voice after registration). */
+  midi: number;
   /** Stereo panning (-1: left, 0: center, 1: right). */
   pan: number;
 };
