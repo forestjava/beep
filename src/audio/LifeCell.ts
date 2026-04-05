@@ -24,6 +24,7 @@ export class LifeCell {
   private _pan: number;
 
   /** Доля разницы `powerTarget - power` за один тик; задаётся извне (крутилка → {@link Life.setPowerDeferralBlend}). */
+  // @ts-ignore unused
   private powerDeferralBlend: number;
 
   /** Целевой вес; текущий `power` догоняет её в {@link tick}. */
@@ -36,6 +37,7 @@ export class LifeCell {
   readonly entity: HarmonicEntity;
 
   private readonly lifecycle: LifeRegistry<LifeCell>;
+  private readonly tickIntervalMs: number;
 
   constructor(
     lifecycle: LifeRegistry<LifeCell>,
@@ -44,6 +46,7 @@ export class LifeCell {
     power: number,
     pan: number,
     powerDeferralBlend: number,
+    tickIntervalMs: number,
   ) {
     this.lifecycle = lifecycle;
     this._midi = midi;
@@ -51,13 +54,16 @@ export class LifeCell {
     this.powerTarget = power;
     this._pan = pan;
     this.powerDeferralBlend = powerDeferralBlend;
+    this.tickIntervalMs = tickIntervalMs;
+    this.duration = duration;
     this.entity = {
       midi: this._midi,
       gain: powerToGain(this._power),
       pan: this._pan,
+      sampleLifetimeMs: this.duration * this.tickIntervalMs,
     };
+    //console.log("duration", this.duration);
 
-    this.duration = duration;
     this.protection = false;
   }
 
@@ -88,14 +94,16 @@ export class LifeCell {
     this.pushEntityFromSources();
   }
 
-  setPowerDeferralBlend(v: number): void {
-    this.powerDeferralBlend = v;
-  }
+  // setPowerDeferralBlend(v: number): void {
+  //   this.powerDeferralBlend = Math.max(v, 2 / this.duration);
+  //   //console.log("powerDeferralBlend", v);
+  // }
 
   private pushEntityFromSources(): void {
     this.entity.midi = this._midi;
     this.entity.gain = powerToGain(this._power);
     this.entity.pan = this._pan;
+    this.entity.sampleLifetimeMs = this.duration * this.tickIntervalMs;
     if (this.spawned) void this.lifecycle.update(this);
   }
 
@@ -104,8 +112,10 @@ export class LifeCell {
     if (this.lived >= this.duration && !this.protection) void this.die();
     else {
       const delta = this.powerTarget - this.power;
+      const _powerDeferralBlend = 1 / (this.duration - this.lived);
       if (delta !== 0) {
-        this.power += delta * this.powerDeferralBlend;
+        this.power += delta * _powerDeferralBlend;
+        //this.power += delta * this.powerDeferralBlend;
       }
     }
   }

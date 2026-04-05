@@ -4,7 +4,7 @@ import {
   EntropyThresholdKnob,
   GainSmoothTimeKnob,
   MaxChannelsKnob,
-  PowerDeferralBlendKnob,
+  // PowerDeferralBlendKnob,
   TickIntervalKnob,
 } from './components/knobs'
 import { PianoRangeSlider } from './components/PianoRangeSlider'
@@ -12,7 +12,7 @@ import { TransportButton } from './components/TransportButton'
 import { beep } from './BeepPlayer'
 
 export default function MobileBeep() {
-  const [pianoRange, setPianoRange] = useState<[number, number]>([21, 84])
+  const [pianoRange, setPianoRange] = useState<[number, number]>([21, 108])
   const [playing, setPlaying] = useState(false)
   const [loading, setLoading] = useState(false)
 
@@ -40,7 +40,7 @@ export default function MobileBeep() {
         <EntropyThresholdKnob />
         <DurationKnob />
         <GainSmoothTimeKnob />
-        <PowerDeferralBlendKnob />
+        {/* <PowerDeferralBlendKnob /> */}
       </div>
 
       <div className="piano-block">

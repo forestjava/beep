@@ -2,8 +2,8 @@ import type { HarmonicEntity } from "./HarmonicEntity";
 import { loadSampleBuffer, midiToSoundfontFilename } from "./soundfontSample";
 import {
   GAIN_SMOOTH_TIME_DEFAULT,
-  SAMPLED_INSTRUMENT_BASE_URL,
   SAMPLED_INSTRUMENT_FILE_EXT,
+  SAMPLED_SOUNDFONT_GM_BASE,
   USE_SAMPLED_HARMONIC,
 } from "../defaults";
 
@@ -20,19 +20,74 @@ function delay(ms: number): Promise<void> {
   });
 }
 
+/** FluidR3_GM folder names (without `-mp3`), by [duration row][MIDI column]. */
+// @ts-ignore unused
+const INSTRUMENT_GRID: readonly (readonly string[])[] = [
+  [
+    "acoustic_bass",
+    "electric_bass_finger",
+    "pizzicato_strings",
+    "synth_drum",
+    "xylophone",
+    "piccolo",
+  ],
+  [
+    "taiko_drum",
+    "timpani",
+    "acoustic_guitar_steel",
+    "trumpet",
+    "xylophone",
+    "flute",
+  ],
+  ["tuba", "trombone", "cello", "violin", "flute", "piccolo"],
+  [
+    "church_organ",
+    "church_organ",
+    "acoustic_grand_piano",
+    "acoustic_grand_piano",
+    "string_ensemble_1",
+    "choir_aahs",
+  ],
+];
+
+// @ts-ignore unused
+function durationRow(lifetimeMs: number): number {
+  if (lifetimeMs < 200) return 0;
+  if (lifetimeMs < 800) return 1;
+  if (lifetimeMs < 3000) return 2;
+  return 3;
+}
+
+// @ts-ignore unused
+function midiColumn(midi: number): number {
+  if (midi < 24) return 0;
+  if (midi < 35) return 0;
+  if (midi < 48) return 1;
+  if (midi < 57) return 2;
+  if (midi < 81) return 3;
+  if (midi < 96) return 4;
+  return 5;
+}
+
+// @ts-ignore unused
+function pickFluidInstrument(lifetimeMs: number, midi: number): string {
+  //return INSTRUMENT_GRID[durationRow(lifetimeMs)]![midiColumn(midi)]!;
+  return "church_organ";
+}
+
 type Voice =
   | {
-      kind: "Oscillator";
-      sourceNode: OscillatorNode;
-      gainNode: GainNode;
-      panNode: StereoPannerNode;
-    }
+    kind: "Oscillator";
+    sourceNode: OscillatorNode;
+    gainNode: GainNode;
+    panNode: StereoPannerNode;
+  }
   | {
-      kind: "Sample";
-      sourceNode: AudioBufferSourceNode;
-      gainNode: GainNode;
-      panNode: StereoPannerNode;
-    };
+    kind: "Sample";
+    sourceNode: AudioBufferSourceNode;
+    gainNode: GainNode;
+    panNode: StereoPannerNode;
+  };
 
 /**
  * Routes {@link HarmonicEntity} instances through Web Audio: per entity either an oscillator or a
@@ -41,7 +96,7 @@ type Voice =
 export class HarmonicEntityPlayer {
   readonly audioContext: AudioContext;
   private readonly voices = new Map<HarmonicEntity, Voice>();
-  private readonly sampleBufferPromises = new Map<number, Promise<AudioBuffer>>();
+  private readonly sampleBufferPromises = new Map<string, Promise<AudioBuffer>>();
   private gainSmoothTimeMs = GAIN_SMOOTH_TIME_DEFAULT;
 
   constructor(audioContext = new AudioContext()) {
@@ -78,24 +133,32 @@ export class HarmonicEntityPlayer {
     return [...this.voices.keys()];
   }
 
-  private sampleUrlForMidi(midi: number): string {
-    const base = SAMPLED_INSTRUMENT_BASE_URL.endsWith("/")
-      ? SAMPLED_INSTRUMENT_BASE_URL
-      : `${SAMPLED_INSTRUMENT_BASE_URL}/`;
-    return `${base}${midiToSoundfontFilename(midi, SAMPLED_INSTRUMENT_FILE_EXT)}`;
+  private sampleBufferCacheKey(instrument: string, midi: number): string {
+    return `${instrument}\t${midi}`;
   }
 
-  private async loadSampleBufferCached(midi: number): Promise<AudioBuffer | null> {
-    let promise = this.sampleBufferPromises.get(midi);
+  private sampleUrl(instrument: string, midi: number): string {
+    const root = SAMPLED_SOUNDFONT_GM_BASE.endsWith("/")
+      ? SAMPLED_SOUNDFONT_GM_BASE
+      : `${SAMPLED_SOUNDFONT_GM_BASE}/`;
+    return `${root}${instrument}-mp3/${midiToSoundfontFilename(midi, SAMPLED_INSTRUMENT_FILE_EXT)}`;
+  }
+
+  private async loadSampleBufferCached(
+    instrument: string,
+    midi: number,
+  ): Promise<AudioBuffer | null> {
+    const key = this.sampleBufferCacheKey(instrument, midi);
+    let promise = this.sampleBufferPromises.get(key);
     if (!promise) {
-      promise = loadSampleBuffer(this.audioContext, this.sampleUrlForMidi(midi));
-      this.sampleBufferPromises.set(midi, promise);
+      promise = loadSampleBuffer(this.audioContext, this.sampleUrl(instrument, midi));
+      this.sampleBufferPromises.set(key, promise);
     }
     try {
       return await promise;
     } catch (err) {
-      this.sampleBufferPromises.delete(midi);
-      console.error("HarmonicEntityPlayer: sample load failed", { midi, err });
+      this.sampleBufferPromises.delete(key);
+      console.error("HarmonicEntityPlayer: sample load failed", { instrument, midi, err });
       return null;
     }
   }
@@ -134,7 +197,8 @@ export class HarmonicEntityPlayer {
     let voice: Voice;
 
     if (USE_SAMPLED_HARMONIC) {
-      const buffer = await this.loadSampleBufferCached(entity.midi);
+      const instrument = pickFluidInstrument(entity.sampleLifetimeMs, entity.midi);
+      const buffer = await this.loadSampleBufferCached(instrument, entity.midi);
       if (buffer) {
         const sourceNode = new AudioBufferSourceNode(this.audioContext, { buffer });
         sourceNode.loop = true;

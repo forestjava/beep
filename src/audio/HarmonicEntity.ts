@@ -9,4 +9,9 @@ export type HarmonicEntity = {
   midi: number;
   /** Stereo panning (-1: left, 0: center, 1: right). */
   pan: number;
+  /**
+   * Expected wall-clock lifetime in ms (e.g. ticks × tick interval). Used only when choosing
+   * FluidR3_GM `{instrument}-mp3` at {@link HarmonicEntityPlayer.push}; ignored by the oscillator.
+   */
+  sampleLifetimeMs: number;
 };

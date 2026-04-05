@@ -6,7 +6,7 @@ import { getEntropy } from "./consonanse";
 import { randomEntropyIndex } from "./weights";
 
 // defaults
-import { DURATION_DEFAULT, TICK_INTERVAL_DEFAULT, CHANNELS_DEFAULT, ENTROPY_THRESHOLD_DEFAULT, PIANO_SEMITONE_MIN, PIANO_SEMITONE_MAX, POWER_DEFERRAL_BLEND_DEFAULT } from "../defaults";
+import { DURATION_DEFAULT, DURATION_MIN, TICK_INTERVAL_DEFAULT, CHANNELS_DEFAULT, ENTROPY_THRESHOLD_DEFAULT, PIANO_SEMITONE_MIN, PIANO_SEMITONE_MAX, POWER_DEFERRAL_BLEND_DEFAULT } from "../defaults";
 
 export class Life implements LifeRegistry<LifeCell> {
   private readonly active = new Set<LifeCell>();
@@ -78,13 +78,18 @@ export class Life implements LifeRegistry<LifeCell> {
 
     const peers = [...this.active];
 
+    const duration_min = Math.max(DURATION_MIN, this.tickInterval);
+    const duration = Math.exp(Math.log(duration_min) + Math.random() * (Math.log(this.duration) - Math.log(duration_min)));
+
     const cell = new LifeCell(
       this,
       this.pickNextSpawnMidi(),
-      Math.random() * (this.duration / this.tickInterval),
+      //Math.random() * (this.duration / this.tickInterval),
+      duration / this.tickInterval,
       0, //Math.random(),
       Math.random() * 2 - 1,
       this.powerDeferralBlend,
+      this.tickInterval,
     );
 
     if (peers.length == 0) {
@@ -101,10 +106,11 @@ export class Life implements LifeRegistry<LifeCell> {
       const weight = this.consonantWeight(teamEntropy);
       for (const peer of peers) {
         if (team.includes(peer)) {
-          peer.powerTarget = team.length * weight;
+          peer.powerTarget = 1; //weight;
         } else {
           peer.powerTarget = 0;
         }
+        //peer.setPowerDeferralBlend(1 / peer.duration)
       }
       this.log?.(`${this.active.size + 1} channels, ${team.length} team, ${teamEntropy.toFixed(0)} entropy, ${weight.toFixed(3)} boost, [${team.map((member) => member.power.toFixed(3))}], [${team.map((member) => member.duration.toFixed(0))}]`);
 
