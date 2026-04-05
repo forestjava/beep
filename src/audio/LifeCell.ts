@@ -2,7 +2,7 @@ import type { HarmonicEntity } from "./HarmonicEntity";
 import type { LifeRegistry } from "./LifeRegistry";
 
 const GAIN_MIN = 0;
-const GAIN_MAX = 0.5;
+const GAIN_MAX = 0.4;
 
 function clamp(x: number, lo: number, hi: number): number {
   return Math.min(hi, Math.max(lo, x));
@@ -106,9 +106,12 @@ export class LifeCell {
   tick(): void {
     this.lived += 1;
     if (this.lived >= this.duration && !this.protection) void this.die();
-
-    const delta = this.powerTarget - this.power;
-    this.power += delta * this.powerDeferralBlend;
+    else {
+      const delta = this.powerTarget - this.power;
+      if (delta !== 0) {
+        this.power += delta * this.powerDeferralBlend;
+      }
+    }
   }
 
   /** Register voice, join lifecycle set. */

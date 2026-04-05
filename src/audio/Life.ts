@@ -94,22 +94,28 @@ export class Life implements LifeRegistry<LifeCell> {
 
     const { team, teamEntropy } = findGroupGreedy([...peers, cell], this.entropyThreshold);
 
-    const weight = this.consonantWeight(teamEntropy);
-    for (const peer of peers) {
-      if (team.includes(peer)) {
-        peer.powerTarget = weight;
-      } else {
-        peer.powerTarget = 0;
+    if (team.length === 0) {
+      cell.powerTarget = 1;
+
+    } else {
+      const weight = this.consonantWeight(teamEntropy);
+      for (const peer of peers) {
+        if (team.includes(peer)) {
+          peer.powerTarget = weight;
+        } else {
+          peer.powerTarget = 0;
+        }
       }
-    }
-    this.log?.(`${this.active.size + 1} channels, ${team.length} team, ${teamEntropy.toFixed(0)} entropy, ${weight.toFixed(3)} boost, [${team.map((member) => member.power.toFixed(3))}], [${team.map((member) => member.duration.toFixed(0))}]`);
+      this.log?.(`${this.active.size + 1} channels, ${team.length} team, ${teamEntropy.toFixed(0)} entropy, ${weight.toFixed(3)} boost, [${team.map((member) => member.power.toFixed(3))}], [${team.map((member) => member.duration.toFixed(0))}]`);
+
+    };
 
     await cell.spawn();
   }
 
 
   private async killWeakestCell(): Promise<void> {
-    while (this.active.size >= this.channels) {
+    if (this.active.size >= this.channels) {
       const weakest = this.pickWeakestCell();
       if (weakest) await weakest.die();
       this.log?.(`killing up to ${this.active.size} channels`);
