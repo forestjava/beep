@@ -4,22 +4,17 @@ import {
   EntropyThresholdKnob,
   GainSmoothTimeKnob,
   MaxChannelsKnob,
-  // PowerDeferralBlendKnob,
+  PowerDeferralBlendKnob,
   TickIntervalKnob,
+  SpawnIntervalKnob,
 } from './components/knobs'
-import { PianoRangeSlider } from './components/PianoRangeSlider'
+import { PianoRangeSlider } from './components/knobs/PianoRangeSlider'
 import { TransportButton } from './components/TransportButton'
 import { beep } from './BeepPlayer'
 
 export default function MobileBeep() {
-  const [pianoRange, setPianoRange] = useState<[number, number]>([21, 108])
   const [playing, setPlaying] = useState(false)
   const [loading, setLoading] = useState(false)
-
-  const onPianoChange = (range: [number, number]) => {
-    setPianoRange(range)
-    beep.setPianoRange(range[0], range[1])
-  }
 
   const togglePlay = async () => {
     if (loading) return
@@ -36,21 +31,16 @@ export default function MobileBeep() {
 
       <div className="knobs-grid">
         <TickIntervalKnob />
-        <MaxChannelsKnob />
+        <SpawnIntervalKnob />
+        {/* <MaxChannelsKnob />
         <EntropyThresholdKnob />
         <DurationKnob />
         <GainSmoothTimeKnob />
-        {/* <PowerDeferralBlendKnob /> */}
+        <PowerDeferralBlendKnob /> */}
       </div>
 
       <div className="piano-block">
-        <div className="piano-head">
-          <span className="piano-label">PIANO</span>
-          <span className="piano-readout">
-            {pianoRange[0]} – {pianoRange[1]}
-          </span>
-        </div>
-        <PianoRangeSlider value={pianoRange} onChange={onPianoChange} />
+        <PianoRangeSlider />
       </div>
 
       <TransportButton

@@ -2,6 +2,10 @@ export const TICK_INTERVAL_SCALE = 1000;
 export const TICK_INTERVAL_MIN = 40;
 export const TICK_INTERVAL_DEFAULT = 400;
 
+export const SPAWN_INTERVAL_SCALE = 1000;
+export const SPAWN_INTERVAL_MIN = 40;
+export const SPAWN_INTERVAL_DEFAULT = 1000;
+
 export const CHANNELS_SCALE = 16;
 export const CHANNELS_MIN = 4;
 export const CHANNELS_DEFAULT = 16;

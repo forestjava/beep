@@ -10,7 +10,7 @@ export default function DesktopPage() {
 
   useEffect(() => {
     beep.subscribe((line) => {
-      setLogLines((prev) => [...prev, line].slice(-LOG_CAP));
+      setLogLines((prev) => [...prev, `${new Date().toLocaleTimeString()} ${line}`].slice(-LOG_CAP));
     })
   }, [])
 

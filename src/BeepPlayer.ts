@@ -7,24 +7,28 @@ export class BeepPlayer {
     this.life.setTickInterval(value);
   }
 
+  setSpawnInterval(value: number): void {
+    this.life.setSpawnInterval(value);
+  }
+
   setMaxConcurrentEntities(value: number): void {
-    this.life.setMaxConcurrentEntities(value);
+    //this.life.setMaxConcurrentEntities(value);
   }
 
   setEntropyThreshold(value: number): void {
-    this.life.setEntropyThreshold(value);
+    //this.life.setEntropyThreshold(value);
   }
 
   setDuration(value: number): void {
-    this.life.setDuration(value);
+    //this.life.setDuration(value);
   }
 
   setGainSmoothTimeMs(value: number): void {
-    this.life.setGainSmoothTimeMs(value);
+    //this.life.setGainSmoothTimeMs(value);
   }
 
   setPowerDeferralBlend(value: number): void {
-    this.life.setPowerDeferralBlend(value);
+    //this.life.setPowerDeferralBlend(value);
   }
 
   setPianoRange(minSemitone: number, maxSemitone: number): void {
