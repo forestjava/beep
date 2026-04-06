@@ -9,15 +9,15 @@ function midiToFrequency(midi: number): number {
 type Voice =
   | {
     kind: "Oscillator";
-    sourceNode: OscillatorNode;
-    gainNode: GainNode;
-    panNode: StereoPannerNode;
+    source: OscillatorNode;
+    gainer: GainNode;
+    panner: StereoPannerNode;
   }
   | {
     kind: "Sample";
-    sourceNode: AudioBufferSourceNode;
-    gainNode: GainNode;
-    panNode: StereoPannerNode;
+    source: AudioBufferSourceNode;
+    gainer: GainNode;
+    panner: StereoPannerNode;
   };
 
 export class AudioContextPlayer {
@@ -60,23 +60,52 @@ export class AudioContextPlayer {
 
         const voice: Voice = {
             kind: "Sample",
-            sourceNode: new AudioBufferSourceNode(this.audioContext, { 
+            source: new AudioBufferSourceNode(this.audioContext, { 
                 buffer, 
                 loop: false 
             }),
-            gainNode: new GainNode(this.audioContext, { gain: 1 }),
-            panNode: new StereoPannerNode(this.audioContext),
+            gainer: new GainNode(this.audioContext, { gain: 0 }),
+            panner: new StereoPannerNode(this.audioContext),
         };
 
-        voice.sourceNode.connect(voice.gainNode);
-        voice.gainNode.connect(voice.panNode);
-        voice.panNode.connect(this.audioContext.destination);        
+        voice.source.connect(voice.gainer);
+        voice.gainer.connect(voice.panner);
+        voice.panner.connect(this.audioContext.destination);        
 
         const t0 = this.audioContext.currentTime;
-        voice.gainNode.gain.setValueCurveAtTime([0, 1], t0, AudioContextPlayer.GAIN_SMOOTH_TIME / 1000);
-        voice.sourceNode.start();
+        // voice.gainer.gain.setValueCurveAtTime([0, 1], t0, AudioContextPlayer.GAIN_SMOOTH_TIME / 1000);
+        // voice.gainer.gain.setValueCurveAtTime([1, 0], t0 + buffer.duration - AudioContextPlayer.GAIN_SMOOTH_TIME / 1000, t0 + buffer.duration);
+        voice.gainer.gain.setValueAtTime(0, t0);
+        voice.gainer.gain.linearRampToValueAtTime(1, t0 + AudioContextPlayer.GAIN_SMOOTH_TIME / 1000);
+        voice.gainer.gain.setValueAtTime(1, t0 + buffer.duration - AudioContextPlayer.GAIN_SMOOTH_TIME / 1000);
+        voice.gainer.gain.linearRampToValueAtTime(0, t0 + buffer.duration);
+        
+        setTimeout(() => {
+            const crossfade: Voice = {
+                kind: "Sample",
+                source: new AudioBufferSourceNode(this.audioContext, { buffer }),
+                gainer: new GainNode(this.audioContext, { gain: 0 }),
+                panner: new StereoPannerNode(this.audioContext),
+            };    
+    
+            crossfade.source.connect(crossfade.gainer);
+            crossfade.gainer.connect(crossfade.panner);
+            crossfade.panner.connect(this.audioContext.destination);
+            
+            const t0 = this.audioContext.currentTime;
 
+            crossfade.gainer.gain.setValueAtTime(0, t0);
+            crossfade.gainer.gain.linearRampToValueAtTime(1, t0 + AudioContextPlayer.GAIN_SMOOTH_TIME / 1000);
+            crossfade.gainer.gain.setValueAtTime(1, t0 + buffer.duration - AudioContextPlayer.GAIN_SMOOTH_TIME / 1000);
+            crossfade.gainer.gain.linearRampToValueAtTime(0, t0 + buffer.duration);
+            
+            crossfade.source.start();
+        }, buffer.duration * 1000 - AudioContextPlayer.GAIN_SMOOTH_TIME);
+
+        voice.source.start();
     }
 
-    
+    tick(): void {
+    }
+
 }    

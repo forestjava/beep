@@ -160,6 +160,7 @@ export class Life /*implements LifeRegistry<LifeCell>*/ {
 
   private tick(): void {
     this.log?.(`tick`);
+    this.player.tick();
   }
 
   private scheduleTickTimers(): void {
