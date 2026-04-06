@@ -14,11 +14,11 @@ export class Life /*implements LifeRegistry<LifeCell>*/ {
   // settings
   static TICK_INTERVAL = TICK_INTERVAL_DEFAULT;
   static SPAWN_INTERVAL = SPAWN_INTERVAL_DEFAULT;
-  // private duration = DURATION_DEFAULT;
+  static DURATION = DURATION_DEFAULT;
   // private channels = CHANNELS_DEFAULT;
   // private entropyThreshold = ENTROPY_THRESHOLD_DEFAULT;
-  static PIANO_SEMITONE_MIN = PIANO_SEMITONE_MIN;
-  static PIANO_SEMITONE_MAX = PIANO_SEMITONE_MAX;
+  static PIANO_SEMITONE_FROM = PIANO_SEMITONE_MIN;
+  static PIANO_SEMITONE_TO = PIANO_SEMITONE_MAX;
   // private powerDeferralBlend = POWER_DEFERRAL_BLEND_DEFAULT;
 
 
@@ -148,11 +148,12 @@ export class Life /*implements LifeRegistry<LifeCell>*/ {
   // }
 
   async spawn(): Promise<void> {
-    const keys = Life.PIANO_SEMITONE_MAX - Life.PIANO_SEMITONE_MIN + 1;
-    const tone = Life.PIANO_SEMITONE_MIN + Math.floor(Math.random() * keys);
-    this.log?.(`spawn ${tone}`);
+    const keys = Life.PIANO_SEMITONE_TO - Life.PIANO_SEMITONE_FROM + 1;
+    const tone = Life.PIANO_SEMITONE_FROM + Math.floor(Math.random() * keys);
+    const duration = Life.DURATION;
+    this.log?.(`spawn ${tone} ${duration}`);
 
-    const cell = new LifeCell(tone);
+    const cell = new LifeCell(tone, duration);
     await this.register(cell);
 
     await this.player.play(cell);

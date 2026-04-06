@@ -72,11 +72,14 @@ export class LifeCell {
   // }
 
   readonly tone: number;
+  readonly duration: number;
   
   constructor(
     tone: number,
+    duration: number,
   ) {
     this.tone = tone;
+    this.duration = duration;
   }
 
   // get midi(): number {

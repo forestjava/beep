@@ -14,7 +14,7 @@ export const ENTROPY_THRESHOLD_DEFAULT = 128;
 
 export const DURATION_SCALE = 10000;
 export const DURATION_MIN = 40;
-export const DURATION_DEFAULT = 10000;
+export const DURATION_DEFAULT = 1000;
 
 export const PIANO_SEMITONE_MIN = 21;
 export const PIANO_SEMITONE_MAX = 108;

@@ -21,7 +21,7 @@ export class BeepPlayer {
   }
 
   setDuration(value: number): void {
-    //this.life.setDuration(value);
+    Life.DURATION = value;
   }
 
   setGainSmoothTimeMs(value: number): void {
@@ -33,8 +33,8 @@ export class BeepPlayer {
   }
 
   setPianoRange(minSemitone: number, maxSemitone: number): void {
-    Life.PIANO_SEMITONE_MIN = minSemitone;
-    Life.PIANO_SEMITONE_MAX = maxSemitone;
+    Life.PIANO_SEMITONE_FROM = minSemitone;
+    Life.PIANO_SEMITONE_TO = maxSemitone;
   }
 
   async play(): Promise<void> {

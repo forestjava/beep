@@ -33,9 +33,10 @@ export default function MobileBeep() {
         <TickIntervalKnob />
         <SpawnIntervalKnob />
         <GainSmoothTimeKnob />
+        <DurationKnob />
         {/* <MaxChannelsKnob />
         <EntropyThresholdKnob />
-        <DurationKnob />        
+                
         <PowerDeferralBlendKnob /> */}
       </div>
 
