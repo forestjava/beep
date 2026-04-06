@@ -25,9 +25,6 @@ export const GAIN_SMOOTH_TIME_DEFAULT = 400;
 
 export const POWER_DEFERRAL_BLEND_DEFAULT = 0.100;
 
-/** When true, voices use gleitz-style soundfont samples; otherwise {@link OscillatorNode}. */
-export const USE_SAMPLED_HARMONIC = true;
-
 /** Base URL for FluidR3_GM (trailing slash). Instrument folder is `{name}-mp3/`. */
 export const SAMPLED_SOUNDFONT_GM_BASE = "https://gleitz.github.io/midi-js-soundfonts/FluidR3_GM/";
 

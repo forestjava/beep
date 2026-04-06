@@ -32,10 +32,10 @@ export default function MobileBeep() {
       <div className="knobs-grid">
         <TickIntervalKnob />
         <SpawnIntervalKnob />
+        <GainSmoothTimeKnob />
         {/* <MaxChannelsKnob />
         <EntropyThresholdKnob />
-        <DurationKnob />
-        <GainSmoothTimeKnob />
+        <DurationKnob />        
         <PowerDeferralBlendKnob /> */}
       </div>
 

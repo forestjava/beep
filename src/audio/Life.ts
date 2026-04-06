@@ -1,6 +1,8 @@
-import type { LifeRegistry } from "./LifeRegistry";
-import { HarmonicEntityPlayer } from "./HarmonicEntityPlayer";
+// import type { LifeRegistry } from "./LifeRegistry";
+// import { HarmonicEntityPlayer } from "./HarmonicEntityPlayer";
+
 import { LifeCell } from "./LifeCell";
+import { AudioContextPlayer } from "./AudioContextPlayer";
 //import { findGroupGreedy } from "./findGroupGreedy";
 import { getEntropy } from "./consonanse";
 import { randomEntropyIndex } from "./weights";
@@ -8,26 +10,30 @@ import { randomEntropyIndex } from "./weights";
 // defaults
 import { DURATION_DEFAULT, DURATION_MIN, TICK_INTERVAL_DEFAULT, SPAWN_INTERVAL_DEFAULT, CHANNELS_DEFAULT, ENTROPY_THRESHOLD_DEFAULT, PIANO_SEMITONE_MIN, PIANO_SEMITONE_MAX, POWER_DEFERRAL_BLEND_DEFAULT } from "../defaults";
 
-export class Life implements LifeRegistry<LifeCell> {
+export class Life /*implements LifeRegistry<LifeCell>*/ {
+  // settings
+  static TICK_INTERVAL = TICK_INTERVAL_DEFAULT;
+  static SPAWN_INTERVAL = SPAWN_INTERVAL_DEFAULT;
+  // private duration = DURATION_DEFAULT;
+  // private channels = CHANNELS_DEFAULT;
+  // private entropyThreshold = ENTROPY_THRESHOLD_DEFAULT;
+  static PIANO_SEMITONE_MIN = PIANO_SEMITONE_MIN;
+  static PIANO_SEMITONE_MAX = PIANO_SEMITONE_MAX;
+  // private powerDeferralBlend = POWER_DEFERRAL_BLEND_DEFAULT;
+
+
+
   private readonly live = new Set<LifeCell>();
+  private readonly player: AudioContextPlayer = new AudioContextPlayer();
   private tickTimer: ReturnType<typeof setInterval> | null = null;
   private spawnTimer: ReturnType<typeof setInterval> | null = null;
   private log: ((line: string) => void) | null = null;
 
-  // settings
-  private tickInterval = TICK_INTERVAL_DEFAULT;
-  private spawnInterval = SPAWN_INTERVAL_DEFAULT;
-  // private duration = DURATION_DEFAULT;
-  // private channels = CHANNELS_DEFAULT;
-  // private entropyThreshold = ENTROPY_THRESHOLD_DEFAULT;
-  private pianoSemitoneMin = PIANO_SEMITONE_MIN;
-  private pianoSemitoneMax = PIANO_SEMITONE_MAX;
-  // private powerDeferralBlend = POWER_DEFERRAL_BLEND_DEFAULT;
 
   // /** Предыдущая выбранная MIDI при спавне; первая нота равномерно случайная, далее — по энтропии. */
   // private currentKey: number | null = null;
 
-   private readonly player: HarmonicEntityPlayer = new HarmonicEntityPlayer();
+  //  private readonly player: HarmonicEntityPlayer = new HarmonicEntityPlayer();
 
   async register(cell: LifeCell): Promise<void> {
     this.live.add(cell);
@@ -142,11 +148,14 @@ export class Life implements LifeRegistry<LifeCell> {
   // }
 
   async spawn(): Promise<void> {
-    const tone = this.pianoSemitoneMin + Math.floor(Math.random() * (this.pianoSemitoneMax - this.pianoSemitoneMin + 1));
+    const keys = Life.PIANO_SEMITONE_MAX - Life.PIANO_SEMITONE_MIN + 1;
+    const tone = Life.PIANO_SEMITONE_MIN + Math.floor(Math.random() * keys);
     this.log?.(`spawn ${tone}`);
 
     const cell = new LifeCell(tone);
     await this.register(cell);
+
+    await this.player.play(cell);
   }
 
   private tick(): void {
@@ -156,10 +165,10 @@ export class Life implements LifeRegistry<LifeCell> {
   private scheduleTickTimers(): void {
     this.tickTimer = setInterval(() => {
       void this.tick();
-    }, this.tickInterval);
+    }, Life.TICK_INTERVAL);
     this.spawnTimer = setInterval(() => {
       void this.spawn();
-    }, this.spawnInterval);
+    }, Life.SPAWN_INTERVAL);
   }
 
   private clearTickTimers(): void {
@@ -179,50 +188,13 @@ export class Life implements LifeRegistry<LifeCell> {
   }
 
   async pause(): Promise<void> {
-    await this.player.suspend();
     this.clearTickTimers();
+    await this.player.suspend();   
   }
 
   async shutdown(): Promise<void> {
-    await this.player.shutdown();
     this.clearTickTimers();
-  }
-
-  setTickInterval(value: number): void {
-    this.tickInterval = Math.max(1, Math.round(value));
-    this.clearTickTimers();
-    this.scheduleTickTimers();
-  }
-
-  setSpawnInterval(value: number): void {
-    this.spawnInterval = Math.max(1, Math.round(value));
-    this.clearTickTimers();
-    this.scheduleTickTimers();
-  }
-
-  // setMaxConcurrentEntities(value: number): void {
-  //   this.channels = value;
-  // }
-
-  // setEntropyThreshold(value: number): void {
-  //   this.entropyThreshold = value;
-  // }
-
-  // setDuration(value: number): void {
-  //   this.duration = value;
-  // }
-
-  // setGainSmoothTimeMs(value: number): void {
-  //   this.player.setGainSmoothTimeMs(value);
-  // }
-
-  // setPowerDeferralBlend(value: number): void {
-  //   this.powerDeferralBlend = value;
-  // }
-
-  setPianoRange(minSemitone: number, maxSemitone: number): void {
-    this.pianoSemitoneMin = minSemitone;
-    this.pianoSemitoneMax = maxSemitone;
+    await this.player.close();    
   }
 
   subscribe(log: (line: string) => void): void {

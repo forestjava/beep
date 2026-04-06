@@ -1,3 +1,5 @@
+import { SAMPLED_SOUNDFONT_GM_BASE, SAMPLED_INSTRUMENT_FILE_EXT } from "../defaults";
+
 /** Gleitz FluidR3_GM *-mp3 sets use flats (Db, Eb, …), not Cs/Ds. */
 const NOTE_NAMES = [
   "C",
@@ -19,6 +21,10 @@ export function midiToSoundfontFilename(midi: number, fileExt: string): string {
   const name = NOTE_NAMES[midi % 12]!;
   const octave = Math.floor(midi / 12) - 1;
   return `${name}${octave}.${fileExt}`;
+}
+
+export function sampleUrl(instrument: string, midi: number): string {
+  return `${SAMPLED_SOUNDFONT_GM_BASE}${instrument}-mp3/${midiToSoundfontFilename(midi, SAMPLED_INSTRUMENT_FILE_EXT)}`;
 }
 
 export async function loadSampleBuffer(

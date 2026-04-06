@@ -4,7 +4,6 @@ import {
   GAIN_SMOOTH_TIME_DEFAULT,
   SAMPLED_INSTRUMENT_FILE_EXT,
   SAMPLED_SOUNDFONT_GM_BASE,
-  USE_SAMPLED_HARMONIC,
 } from "../defaults";
 
 /** Wall-clock slack so timers align with audio render timeline, in seconds. */
@@ -196,7 +195,7 @@ export class HarmonicEntityPlayer {
 
     let voice: Voice;
 
-    if (USE_SAMPLED_HARMONIC) {
+    if (/*USE_SAMPLED_HARMONIC*/ true) {
       const instrument = pickFluidInstrument(entity.sampleLifetimeMs, entity.midi);
       const buffer = await this.loadSampleBufferCached(instrument, entity.midi);
       if (buffer) {

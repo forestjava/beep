@@ -1,6 +1,8 @@
 // import type { HarmonicEntity } from "./HarmonicEntity";
 // import type { LifeRegistry } from "./LifeRegistry";
 
+import { GAIN_SMOOTH_TIME_DEFAULT } from "../defaults";
+
 const GAIN_MIN = 0;
 const GAIN_MAX = 1;
 
@@ -13,6 +15,8 @@ const GAIN_MAX = 1;
 // }
 
 export class LifeCell {
+
+
   // /** Сколько глобальных тактов клетка уже «прожила» в фазе active. */
   // private lived = 0;
 
@@ -67,7 +71,7 @@ export class LifeCell {
   //   this.protection = false;
   // }
 
-  private readonly tone: number;
+  readonly tone: number;
   
   constructor(
     tone: number,

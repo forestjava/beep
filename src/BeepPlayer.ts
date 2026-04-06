@@ -1,14 +1,15 @@
+import { AudioContextPlayer } from './audio/AudioContextPlayer';
 import { Life } from './audio/Life'
 
 export class BeepPlayer {
   private life: Life = new Life();
 
   setTickInterval(value: number): void {
-    this.life.setTickInterval(value);
+    Life.TICK_INTERVAL = value;
   }
 
   setSpawnInterval(value: number): void {
-    this.life.setSpawnInterval(value);
+    Life.SPAWN_INTERVAL = value;
   }
 
   setMaxConcurrentEntities(value: number): void {
@@ -24,7 +25,7 @@ export class BeepPlayer {
   }
 
   setGainSmoothTimeMs(value: number): void {
-    //this.life.setGainSmoothTimeMs(value);
+    AudioContextPlayer.GAIN_SMOOTH_TIME = value;
   }
 
   setPowerDeferralBlend(value: number): void {
@@ -32,7 +33,8 @@ export class BeepPlayer {
   }
 
   setPianoRange(minSemitone: number, maxSemitone: number): void {
-    this.life.setPianoRange(minSemitone, maxSemitone);
+    Life.PIANO_SEMITONE_MIN = minSemitone;
+    Life.PIANO_SEMITONE_MAX = maxSemitone;
   }
 
   async play(): Promise<void> {
