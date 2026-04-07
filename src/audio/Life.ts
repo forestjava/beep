@@ -6,9 +6,15 @@ import { AudioContextPlayer } from "./AudioContextPlayer";
 //import { findGroupGreedy } from "./findGroupGreedy";
 
 // defaults
-import { DURATION_DEFAULT, DURATION_MIN, SPAWN_INTERVAL_DEFAULT, PIANO_SEMITONE_MIN, PIANO_SEMITONE_MAX } from "../defaults";
+import { DURATION_DEFAULT, SPAWN_INTERVAL_DEFAULT, PIANO_SEMITONE_MIN, PIANO_SEMITONE_MAX } from "../defaults";
 import { getEntropy } from "./consonanse";
 import { randomEntropyIndex } from "./weights";
+
+/** Длительности нот (мс): 1/1 … 1/32 при кварте = 1000 мс (60 уд/мин). */
+const NOTE_DURATIONS_MS = [4000, 2000, 1000, 500, 250, 125] as const;
+
+/** Целевая суммарная длительность одной серии (целая нота при кварте 1000 мс). */
+const SERIE_TARGET_MS = 4000;
 
 export class Life /*implements LifeRegistry<LifeCell>*/ {
   // settings
@@ -152,35 +158,32 @@ export class Life /*implements LifeRegistry<LifeCell>*/ {
   private lastSpawnedKey: number | null = null;
 
   async spawn(): Promise<void> {
-    this.log?.(`scheduled spawn`);
-    await this.serieSpawn();
+    // tone
+    const keys = Life.PIANO_SEMITONE_TO - Life.PIANO_SEMITONE_FROM + 1;
+    let tone: number;
+    if (this.lastSpawnedKey === null) {
+      tone = Life.PIANO_SEMITONE_FROM + Math.floor(Math.random() * keys);
+    } else {
+      tone = this.pickNextSpawnMidi(this.lastSpawnedKey);
+    }
+    this.lastSpawnedKey = tone;
+
+    // дискретная длительность; серия заканчивается при сумме ≥ SERIE_TARGET_MS (возможен «хвост»)
+    const duration =
+      NOTE_DURATIONS_MS[Math.floor(Math.random() * NOTE_DURATIONS_MS.length)];
+
+    this.log?.(`spawn ${tone} ${duration}`);
+
+    const cell = new LifeCell(tone, duration);
+
+    await this.register(cell);
+    await this.player.play(cell);
+    await this.unregister(cell);
   }
 
   async serieSpawn(): Promise<void> {
-    const count = 16;    
-    for (let i = 0; i < count; i++) {
-      // tone
-      const keys = Life.PIANO_SEMITONE_TO - Life.PIANO_SEMITONE_FROM + 1;
-      //const tone = Life.PIANO_SEMITONE_FROM + Math.floor(Math.random() * keys);
-      let tone: number;
-      if (this.lastSpawnedKey === null) {
-        tone = Life.PIANO_SEMITONE_FROM + Math.floor(Math.random() * keys);
-      } else {
-        tone = this.pickNextSpawnMidi(this.lastSpawnedKey);
-      }
-      this.lastSpawnedKey = tone;
-
-      // duration
-      const duration = DURATION_MIN + Math.random() * (Life.DURATION_TO - DURATION_MIN);
-    
-      // log
-      this.log?.(`spawn ${tone} ${duration}`);
-
-      const cell = new LifeCell(tone, duration);
-
-      await this.register(cell);
-      await this.player.play(cell);
-      await this.unregister(cell);
+    let serieElapsedMs = 0;
+    while (serieElapsedMs < SERIE_TARGET_MS) {
     }
   }    
 

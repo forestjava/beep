@@ -1,10 +1,10 @@
 export const TICK_INTERVAL_SCALE = 1000;
 export const TICK_INTERVAL_MIN = 40;
-export const TICK_INTERVAL_DEFAULT = 400;
+export const TICK_INTERVAL_DEFAULT = 1000;
 
 export const SPAWN_INTERVAL_SCALE = 1000;
 export const SPAWN_INTERVAL_MIN = 40;
-export const SPAWN_INTERVAL_DEFAULT = 8000;
+export const SPAWN_INTERVAL_DEFAULT = 1000;
 
 export const CHANNELS_SCALE = 16;
 export const CHANNELS_MIN = 4;
@@ -21,7 +21,7 @@ export const PIANO_SEMITONE_MAX = 108;
 
 export const GAIN_SMOOTH_TIME_SCALE = 1000;
 export const GAIN_SMOOTH_TIME_MIN = 10;
-export const GAIN_SMOOTH_TIME_DEFAULT = 200;
+export const GAIN_SMOOTH_TIME_DEFAULT = 125;
 
 export const POWER_DEFERRAL_BLEND_DEFAULT = 0.100;
 
