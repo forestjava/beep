@@ -152,29 +152,37 @@ export class Life /*implements LifeRegistry<LifeCell>*/ {
   private lastSpawnedKey: number | null = null;
 
   async spawn(): Promise<void> {
-    // tone
-    const keys = Life.PIANO_SEMITONE_TO - Life.PIANO_SEMITONE_FROM + 1;
-    //const tone = Life.PIANO_SEMITONE_FROM + Math.floor(Math.random() * keys);
-    let tone: number;
-    if (this.lastSpawnedKey === null) {
-      tone = Life.PIANO_SEMITONE_FROM + Math.floor(Math.random() * keys);
-    } else {
-      tone = this.pickNextSpawnMidi(this.lastSpawnedKey);
-    }
-    this.lastSpawnedKey = tone;
-
-    // duration
-    const duration = DURATION_MIN + Math.random() * (Life.DURATION_TO - DURATION_MIN);
- 
-    // log
-    this.log?.(`spawn ${tone} ${duration}`);
-
-    const cell = new LifeCell(tone, duration);
-    await this.register(cell);
-
-    await this.player.play(cell);
-    // what about unregistering the cell?
+    this.log?.(`scheduled spawn`);
+    await this.serieSpawn();
   }
+
+  async serieSpawn(): Promise<void> {
+    const count = 16;    
+    for (let i = 0; i < count; i++) {
+      // tone
+      const keys = Life.PIANO_SEMITONE_TO - Life.PIANO_SEMITONE_FROM + 1;
+      //const tone = Life.PIANO_SEMITONE_FROM + Math.floor(Math.random() * keys);
+      let tone: number;
+      if (this.lastSpawnedKey === null) {
+        tone = Life.PIANO_SEMITONE_FROM + Math.floor(Math.random() * keys);
+      } else {
+        tone = this.pickNextSpawnMidi(this.lastSpawnedKey);
+      }
+      this.lastSpawnedKey = tone;
+
+      // duration
+      const duration = DURATION_MIN + Math.random() * (Life.DURATION_TO - DURATION_MIN);
+    
+      // log
+      this.log?.(`spawn ${tone} ${duration}`);
+
+      const cell = new LifeCell(tone, duration);
+
+      await this.register(cell);
+      await this.player.play(cell);
+      await this.unregister(cell);
+    }
+  }    
 
   private tick(): void {
     this.player.tick();

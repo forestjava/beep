@@ -32,7 +32,7 @@ type Voice =
 
 type ScheduledEffect = {
   time: number;   // audioCtx.currentTime, в секундах
-  fn: (t0: number) => Promise<void>;
+  fn: (t0: number) => void;
 };
 export class AudioContextPlayer {
     static GAIN_SMOOTH_TIME = GAIN_SMOOTH_TIME_DEFAULT;
@@ -58,7 +58,7 @@ export class AudioContextPlayer {
 
     private queue: ScheduledEffect[] = [];
 
-    schedule(fn: (t0: number) => Promise<void>, audioTime: number) {
+    schedule(fn: (t0: number) => void, audioTime: number) {
       this.queue.push({ time: audioTime, fn });
       this.queue.sort((a, b) => a.time - b.time);
     }
@@ -101,7 +101,7 @@ export class AudioContextPlayer {
         const master = new GainNode(this.audioContext, { gain: 1 });
         master.connect(this.audioContext.destination);
 
-        const playSample = async (t0: number) => {
+        const playSample = (t0: number) => {
           const source = new AudioBufferSourceNode(this.audioContext, { buffer, loop: false });
           const gainer = new GainNode(this.audioContext, { gain: 0 });
           const panner = new StereoPannerNode(this.audioContext);
@@ -129,6 +129,9 @@ export class AudioContextPlayer {
       master.gain.setValueAtTime(1, t0 + durationSec - smoothSec);
       master.gain.linearRampToValueAtTime(0, t0 + durationSec);
 
+      return new Promise<void>((resolve) => {
+        this.schedule(() => resolve(), t0 + durationSec - smoothSec);
+      });
     }
 
 }    
