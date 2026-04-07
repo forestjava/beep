@@ -5,7 +5,6 @@ import {
   GainSmoothTimeKnob,
   MaxChannelsKnob,
   PowerDeferralBlendKnob,
-  TickIntervalKnob,
   SpawnIntervalKnob,
 } from './components/knobs'
 import { PianoRangeSlider } from './components/knobs/PianoRangeSlider'
@@ -30,7 +29,6 @@ export default function MobileBeep() {
       <h1 className="app-title">Beep</h1>
 
       <div className="knobs-grid">
-        <TickIntervalKnob />
         <SpawnIntervalKnob />
         <GainSmoothTimeKnob />
         <DurationKnob />

@@ -4,10 +4,6 @@ import { Life } from './audio/Life'
 export class BeepPlayer {
   private life: Life = new Life();
 
-  setTickInterval(value: number): void {
-    Life.TICK_INTERVAL = value;
-  }
-
   setSpawnInterval(value: number): void {
     Life.SPAWN_INTERVAL = value;
   }

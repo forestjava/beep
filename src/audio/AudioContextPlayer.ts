@@ -30,6 +30,10 @@ type Voice =
 //     panner: StereoPannerNode;
 //   };
 
+type ScheduledEffect = {
+  time: number;   // audioCtx.currentTime, в секундах
+  fn: (t0: number) => Promise<void>;
+};
 
 const SLACK_TIME_MS = 10;
 
@@ -60,6 +64,25 @@ export class AudioContextPlayer {
         await this.audioContext.close();
     }
 
+    private queue: ScheduledEffect[] = [];
+
+    schedule(fn: (t0: number) => Promise<void>, audioTime: number) {
+      this.queue.push({ time: audioTime, fn });
+      this.queue.sort((a, b) => a.time - b.time);
+    }
+  
+    flush(currentAudioTime: number) {
+      while (this.queue.length && this.queue[0].time <= currentAudioTime) {
+        const effect = this.queue.shift()!;
+        void effect.fn(effect.time);
+      }
+    }
+
+    tick(): void {
+      if (this.audioContext.state !== "running") return;
+      this.flush(this.audioContext.currentTime);
+    }
+
     private async getSampleBuffer(instrument: string, midi: number): Promise<AudioBuffer> {
       const key = `${instrument}-${midi}`;
       const cache = this.samplesCache.get(key);
@@ -72,151 +95,34 @@ export class AudioContextPlayer {
       }
     }
 
-/*    
-    async playGame(cells: LifeCell[]): Promise<void> {
-      const instrument = "church_organ";
-      const buffer = await this.getSampleBuffer(instrument, cell.tone);      
-      const voice = new Voice();
-      voice
-        .start()
-        .attack(AudioContextPlayer.GAIN_SMOOTH_TIME)
-        .stay(buffer.duration - AudioContextPlayer.GAIN_SMOOTH_TIME)
-        .release(AudioContextPlayer.GAIN_SMOOTH_TIME)
-        .stop()
-
-      voice
-        .cancelScheduledValues()
-        .gain(0.5)  
-    }  
-*/
-
     async play(cell: LifeCell): Promise<void> {
         const instrument = "church_organ";
         const buffer = await this.getSampleBuffer(instrument, cell.tone);
 
-        const voice: Voice = {
-            kind: "Sample",
-            source: new AudioBufferSourceNode(this.audioContext, { 
-                buffer, 
-                loop: false 
-            }),
-            gainer: new GainNode(this.audioContext, { gain: 0 }),
-            panner: new StereoPannerNode(this.audioContext),
-            timeout: null,
-        };
+        const playSample = async (t0: number) => {
+          const source = new AudioBufferSourceNode(this.audioContext, { buffer, loop: false });
+          const gainer = new GainNode(this.audioContext, { gain: 0 });
+          const panner = new StereoPannerNode(this.audioContext);
+          source.connect(gainer);
+          gainer.connect(panner);
+          panner.connect(this.audioContext.destination);
 
-        voice.source.connect(voice.gainer);
-        voice.gainer.connect(voice.panner);
-        voice.panner.connect(this.audioContext.destination);        
+          gainer.gain.setValueAtTime(0, t0);
+          gainer.gain.linearRampToValueAtTime(1, t0 + AudioContextPlayer.GAIN_SMOOTH_TIME / 1000);
+          gainer.gain.setValueAtTime(1, t0 + buffer.duration - AudioContextPlayer.GAIN_SMOOTH_TIME / 1000);
+          gainer.gain.linearRampToValueAtTime(0, t0 + buffer.duration);
 
-        voice.source.start();
+          source.start(t0);
+          source.stop(t0 + buffer.duration);
+      };
 
-        const t0 = this.audioContext.currentTime;
-        voice.gainer.gain.setValueAtTime(0, t0);
-        voice.gainer.gain.linearRampToValueAtTime(1, t0 + AudioContextPlayer.GAIN_SMOOTH_TIME / 1000);
-        
-        voice.gainer.gain.setValueAtTime(1, t0 + buffer.duration - AudioContextPlayer.GAIN_SMOOTH_TIME / 1000);
-        voice.gainer.gain.linearRampToValueAtTime(0, t0 + buffer.duration);
+      const t0 = this.audioContext.currentTime;
+      const crossStart1 = t0 + buffer.duration - AudioContextPlayer.GAIN_SMOOTH_TIME / 1000;
+      const crossStart2 = crossStart1 + buffer.duration - AudioContextPlayer.GAIN_SMOOTH_TIME / 1000;
 
-        await delay(buffer.duration * 1000);
-        
-        voice.source.stop();
-        // этот подход хорош тем, что возвращает нормальный Promise без setTimeout,
-        // и delay можно использовать один общий для всей цепочки
-        // но его нельзя прервать
-    }
-
-    async playTimeout(cell: LifeCell): Promise<void> {
-        const instrument = "church_organ";
-        const buffer = await this.getSampleBuffer(instrument, cell.tone);
-
-        const voice: Voice = {
-            kind: "Sample",
-            source: new AudioBufferSourceNode(this.audioContext, { 
-                buffer, 
-                loop: false 
-            }),
-            gainer: new GainNode(this.audioContext, { gain: 0 }),
-            panner: new StereoPannerNode(this.audioContext),
-            timeout: setTimeout(() => {
-              const t0 = this.audioContext.currentTime;
-              voice.gainer.gain.setValueAtTime(1, t0);
-              voice.gainer.gain.linearRampToValueAtTime(0, t0 + AudioContextPlayer.GAIN_SMOOTH_TIME / 1000);
-              //voice.source.stop();
-            }, buffer.duration * 1000 - AudioContextPlayer.GAIN_SMOOTH_TIME),
-        };
-
-        voice.source.connect(voice.gainer);
-        voice.gainer.connect(voice.panner);
-        voice.panner.connect(this.audioContext.destination);
-        voice.source.start();   
-
-        const t0 = this.audioContext.currentTime;
-        voice.gainer.gain.setValueAtTime(0, t0);
-        voice.gainer.gain.linearRampToValueAtTime(1, t0 + AudioContextPlayer.GAIN_SMOOTH_TIME / 1000);
-        
-    }
-
-    async playCrossfade(cell: LifeCell): Promise<void> {
-        const instrument = "church_organ";
-        const buffer = await this.getSampleBuffer(instrument, cell.tone);
-
-        const voice: Voice = {
-            kind: "Sample",
-            source: new AudioBufferSourceNode(this.audioContext, { 
-                buffer, 
-                loop: false 
-            }),
-            gainer: new GainNode(this.audioContext, { gain: 0 }),
-            panner: new StereoPannerNode(this.audioContext),
-            timeout: null,
-        };
-
-        voice.source.connect(voice.gainer);
-        voice.gainer.connect(voice.panner);
-        voice.panner.connect(this.audioContext.destination);        
-
-        const t0 = this.audioContext.currentTime;
-        // voice.gainer.gain.setValueCurveAtTime([0, 1], t0, AudioContextPlayer.GAIN_SMOOTH_TIME / 1000);
-        // voice.gainer.gain.setValueCurveAtTime([1, 0], t0 + buffer.duration - AudioContextPlayer.GAIN_SMOOTH_TIME / 1000, t0 + buffer.duration);
-        voice.gainer.gain.setValueAtTime(0, t0);
-        voice.gainer.gain.linearRampToValueAtTime(1, t0 + AudioContextPlayer.GAIN_SMOOTH_TIME / 1000);
-        voice.gainer.gain.setValueAtTime(1, t0 + buffer.duration - AudioContextPlayer.GAIN_SMOOTH_TIME / 1000);
-        voice.gainer.gain.linearRampToValueAtTime(0, t0 + buffer.duration);
-
-        const crossfadeDelayMs = buffer.duration * 1000 - AudioContextPlayer.GAIN_SMOOTH_TIME;
-        const scheduleNextCrossfade = (): void => {
-            const crossfade: Voice = {
-                kind: "Sample",
-                source: new AudioBufferSourceNode(this.audioContext, { buffer }),
-                gainer: new GainNode(this.audioContext, { gain: 0 }),
-                panner: new StereoPannerNode(this.audioContext),
-                timeout: null,
-            };
-
-            crossfade.source.connect(crossfade.gainer);
-            crossfade.gainer.connect(crossfade.panner);
-            crossfade.panner.connect(this.audioContext.destination);
-
-            const tCross = this.audioContext.currentTime;
-
-            crossfade.gainer.gain.setValueAtTime(0, tCross);
-            crossfade.gainer.gain.linearRampToValueAtTime(1, tCross + AudioContextPlayer.GAIN_SMOOTH_TIME / 1000);
-            crossfade.gainer.gain.setValueAtTime(1, tCross + buffer.duration - AudioContextPlayer.GAIN_SMOOTH_TIME / 1000);
-            crossfade.gainer.gain.linearRampToValueAtTime(0, tCross + buffer.duration);
-
-            crossfade.source.start();
-            setTimeout(scheduleNextCrossfade, crossfadeDelayMs);
-        };
-        setTimeout(scheduleNextCrossfade, crossfadeDelayMs);
-
-        voice.source.start();
-        // этот подход кажется более перспективным, так как позволяет оперировать с эффектами так же,
-        // как и с отдельными голосами, через setTimeout (который, впрочем, можно заервнут и в Promise),
-        // который можно прервать.
-    }
-
-    tick(): void {
+      this.schedule(playSample, t0);
+      this.schedule(playSample, crossStart1);
+      this.schedule(playSample, crossStart2);
     }
 
 }    

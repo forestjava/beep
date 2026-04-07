@@ -4,15 +4,12 @@
 import { LifeCell } from "./LifeCell";
 import { AudioContextPlayer } from "./AudioContextPlayer";
 //import { findGroupGreedy } from "./findGroupGreedy";
-import { getEntropy } from "./consonanse";
-import { randomEntropyIndex } from "./weights";
 
 // defaults
-import { DURATION_DEFAULT, DURATION_MIN, TICK_INTERVAL_DEFAULT, SPAWN_INTERVAL_DEFAULT, CHANNELS_DEFAULT, ENTROPY_THRESHOLD_DEFAULT, PIANO_SEMITONE_MIN, PIANO_SEMITONE_MAX, POWER_DEFERRAL_BLEND_DEFAULT } from "../defaults";
+import { DURATION_DEFAULT, DURATION_MIN, SPAWN_INTERVAL_DEFAULT, PIANO_SEMITONE_MIN, PIANO_SEMITONE_MAX } from "../defaults";
 
 export class Life /*implements LifeRegistry<LifeCell>*/ {
   // settings
-  static TICK_INTERVAL = TICK_INTERVAL_DEFAULT;
   static SPAWN_INTERVAL = SPAWN_INTERVAL_DEFAULT;
   static DURATION = DURATION_DEFAULT;
   // private channels = CHANNELS_DEFAULT;
@@ -25,9 +22,17 @@ export class Life /*implements LifeRegistry<LifeCell>*/ {
 
   private readonly live = new Set<LifeCell>();
   private readonly player: AudioContextPlayer = new AudioContextPlayer();
-  private tickTimer: ReturnType<typeof setInterval> | null = null;
+  private tickTimer: number | null = null;
   private spawnTimer: ReturnType<typeof setInterval> | null = null;
   private log: ((line: string) => void) | null = null;
+
+  constructor() {
+    const loop = (): void => {
+      this.tickTimer = requestAnimationFrame(loop);
+      this.tick();
+    };
+    this.tickTimer = requestAnimationFrame(loop);
+  }
 
 
   // /** Предыдущая выбранная MIDI при спавне; первая нота равномерно случайная, далее — по энтропии. */
@@ -160,24 +165,17 @@ export class Life /*implements LifeRegistry<LifeCell>*/ {
   }
 
   private tick(): void {
-    this.log?.(`tick`);
     this.player.tick();
   }
 
-  private scheduleTickTimers(): void {
-    this.tickTimer = setInterval(() => {
-      void this.tick();
-    }, Life.TICK_INTERVAL);
+  private scheduleSpawnTimer(): void {
+    if (this.spawnTimer !== null) return;
     this.spawnTimer = setInterval(() => {
       void this.spawn();
     }, Life.SPAWN_INTERVAL);
   }
 
-  private clearTickTimers(): void {
-    if (this.tickTimer !== null) {
-      clearInterval(this.tickTimer);
-      this.tickTimer = null;
-    }
+  private clearSpawnTimer(): void {
     if (this.spawnTimer !== null) {
       clearInterval(this.spawnTimer);
       this.spawnTimer = null;
@@ -186,17 +184,21 @@ export class Life /*implements LifeRegistry<LifeCell>*/ {
 
   async play(): Promise<void> {
     await this.player.resume();
-    this.scheduleTickTimers();
+    this.scheduleSpawnTimer();
   }
 
   async pause(): Promise<void> {
-    this.clearTickTimers();
-    await this.player.suspend();   
+    this.clearSpawnTimer();
+    await this.player.suspend();
   }
 
   async shutdown(): Promise<void> {
-    this.clearTickTimers();
-    await this.player.close();    
+    if (this.tickTimer !== null) {
+      cancelAnimationFrame(this.tickTimer);
+      this.tickTimer = null;
+    }
+    this.clearSpawnTimer();
+    await this.player.close();
   }
 
   subscribe(log: (line: string) => void): void {
