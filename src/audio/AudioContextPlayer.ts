@@ -34,14 +34,6 @@ type ScheduledEffect = {
   time: number;   // audioCtx.currentTime, в секундах
   fn: (t0: number) => Promise<void>;
 };
-
-const SLACK_TIME_MS = 10;
-
-function delay(ms: number): Promise<void> {
-    return new Promise((resolve) => {
-        setTimeout(resolve, ms + SLACK_TIME_MS);
-    });
-}
 export class AudioContextPlayer {
     static GAIN_SMOOTH_TIME = GAIN_SMOOTH_TIME_DEFAULT;
 
@@ -99,30 +91,44 @@ export class AudioContextPlayer {
         const instrument = "church_organ";
         const buffer = await this.getSampleBuffer(instrument, cell.tone);
 
+        if (buffer.duration <= AudioContextPlayer.GAIN_SMOOTH_TIME / 1000) {
+          throw new Error(
+            `buffer.duration (${buffer.duration}s) must exceed GAIN_SMOOTH_TIME (${AudioContextPlayer.GAIN_SMOOTH_TIME}ms) for crossfade scheduling`,
+          );
+        }
+        const smoothSec = Math.min(buffer.duration / 2, AudioContextPlayer.GAIN_SMOOTH_TIME / 1000);  
+
+        const master = new GainNode(this.audioContext, { gain: 1 });
+        master.connect(this.audioContext.destination);
+
         const playSample = async (t0: number) => {
           const source = new AudioBufferSourceNode(this.audioContext, { buffer, loop: false });
           const gainer = new GainNode(this.audioContext, { gain: 0 });
           const panner = new StereoPannerNode(this.audioContext);
           source.connect(gainer);
           gainer.connect(panner);
-          panner.connect(this.audioContext.destination);
+          panner.connect(master);
 
           gainer.gain.setValueAtTime(0, t0);
-          gainer.gain.linearRampToValueAtTime(1, t0 + AudioContextPlayer.GAIN_SMOOTH_TIME / 1000);
-          gainer.gain.setValueAtTime(1, t0 + buffer.duration - AudioContextPlayer.GAIN_SMOOTH_TIME / 1000);
+          gainer.gain.linearRampToValueAtTime(1, t0 + smoothSec);
+          gainer.gain.setValueAtTime(1, t0 + buffer.duration - smoothSec);
           gainer.gain.linearRampToValueAtTime(0, t0 + buffer.duration);
 
           source.start(t0);
           source.stop(t0 + buffer.duration);
       };
 
-      const t0 = this.audioContext.currentTime;
-      const crossStart1 = t0 + buffer.duration - AudioContextPlayer.GAIN_SMOOTH_TIME / 1000;
-      const crossStart2 = crossStart1 + buffer.duration - AudioContextPlayer.GAIN_SMOOTH_TIME / 1000;
+      const periodSec = buffer.duration - smoothSec;
+      const durationSec = cell.duration / 1000;
+      const N = durationSec <= buffer.duration ? 1 : 1 + Math.ceil((durationSec - buffer.duration) / periodSec);
 
-      this.schedule(playSample, t0);
-      this.schedule(playSample, crossStart1);
-      this.schedule(playSample, crossStart2);
+      const t0 = this.audioContext.currentTime;
+      for (let i = 0; i < N; i++) {
+        this.schedule(playSample, t0 + i * periodSec);
+      }
+      master.gain.setValueAtTime(1, t0 + durationSec - smoothSec);
+      master.gain.linearRampToValueAtTime(0, t0 + durationSec);
+
     }
 
 }    

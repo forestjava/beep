@@ -20,8 +20,8 @@ export const PIANO_SEMITONE_MIN = 21;
 export const PIANO_SEMITONE_MAX = 108;
 
 export const GAIN_SMOOTH_TIME_SCALE = 1000;
-export const GAIN_SMOOTH_TIME_MIN = 40;
-export const GAIN_SMOOTH_TIME_DEFAULT = 400;
+export const GAIN_SMOOTH_TIME_MIN = 10;
+export const GAIN_SMOOTH_TIME_DEFAULT = 200;
 
 export const POWER_DEFERRAL_BLEND_DEFAULT = 0.100;
 

@@ -17,7 +17,7 @@ export class BeepPlayer {
   }
 
   setDuration(value: number): void {
-    Life.DURATION = value;
+    Life.DURATION_TO = value;
   }
 
   setGainSmoothTimeMs(value: number): void {

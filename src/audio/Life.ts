@@ -11,7 +11,7 @@ import { DURATION_DEFAULT, DURATION_MIN, SPAWN_INTERVAL_DEFAULT, PIANO_SEMITONE_
 export class Life /*implements LifeRegistry<LifeCell>*/ {
   // settings
   static SPAWN_INTERVAL = SPAWN_INTERVAL_DEFAULT;
-  static DURATION = DURATION_DEFAULT;
+  static DURATION_TO = DURATION_DEFAULT;
   // private channels = CHANNELS_DEFAULT;
   // private entropyThreshold = ENTROPY_THRESHOLD_DEFAULT;
   static PIANO_SEMITONE_FROM = PIANO_SEMITONE_MIN;
@@ -155,7 +155,7 @@ export class Life /*implements LifeRegistry<LifeCell>*/ {
   async spawn(): Promise<void> {
     const keys = Life.PIANO_SEMITONE_TO - Life.PIANO_SEMITONE_FROM + 1;
     const tone = Life.PIANO_SEMITONE_FROM + Math.floor(Math.random() * keys);
-    const duration = Life.DURATION;
+    const duration = DURATION_MIN + Math.random() * (Life.DURATION_TO - DURATION_MIN);
     this.log?.(`spawn ${tone} ${duration}`);
 
     const cell = new LifeCell(tone, duration);
