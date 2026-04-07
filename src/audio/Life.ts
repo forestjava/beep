@@ -160,8 +160,8 @@ export class Life /*implements LifeRegistry<LifeCell>*/ {
       tone = Life.PIANO_SEMITONE_FROM + Math.floor(Math.random() * keys);
     } else {
       tone = this.pickNextSpawnMidi(this.lastSpawnedKey);
-      this.lastSpawnedKey = tone;
     }
+    this.lastSpawnedKey = tone;
 
     // duration
     const duration = DURATION_MIN + Math.random() * (Life.DURATION_TO - DURATION_MIN);
