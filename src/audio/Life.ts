@@ -7,6 +7,8 @@ import { AudioContextPlayer } from "./AudioContextPlayer";
 
 // defaults
 import { DURATION_DEFAULT, DURATION_MIN, SPAWN_INTERVAL_DEFAULT, PIANO_SEMITONE_MIN, PIANO_SEMITONE_MAX } from "../defaults";
+import { getEntropy } from "./consonanse";
+import { randomEntropyIndex } from "./weights";
 
 export class Life /*implements LifeRegistry<LifeCell>*/ {
   // settings
@@ -66,22 +68,17 @@ export class Life /*implements LifeRegistry<LifeCell>*/ {
   //   return (this.entropyThreshold - raw) / this.entropyThreshold;
   // }
 
-  // /** Первая нота — равномерно по диапазону клавиш; далее — взвешенный выбор через {@link randomEntropyIndex} относительно предыдущей. */
-  // private pickNextSpawnMidi(): number {
-  //   const pianoKeys = this.pianoSemitoneMax - this.pianoSemitoneMin + 1;
-  //   let key: number;
-  //   if (this.currentKey === null) {
-  //     key = this.pianoSemitoneMin + Math.floor(Math.random() * pianoKeys);
-  //   } else {
-  //     const entropies = new Array<number>(pianoKeys);
-  //     for (let i = 0; i < pianoKeys; i++) {
-  //       entropies[i] = getEntropy(this.currentKey, this.pianoSemitoneMin + i);
-  //     }
-  //     key = this.pianoSemitoneMin + randomEntropyIndex(entropies);
-  //   }
-  //   this.currentKey = key;
-  //   return key;
-  // }
+  /** Первая нота — равномерно по диапазону клавиш; далее — взвешенный выбор через {@link randomEntropyIndex} относительно предыдущей. */
+  private pickNextSpawnMidi(currentKey: number): number {
+    const pianoKeys = Life.PIANO_SEMITONE_TO - Life.PIANO_SEMITONE_FROM + 1;
+    let key: number;
+      const entropies = new Array<number>(pianoKeys);
+      for (let index = 0; index < pianoKeys; index++) {
+        entropies[index] = getEntropy(currentKey, Life.PIANO_SEMITONE_FROM + index);
+      }
+      key = Life.PIANO_SEMITONE_FROM + randomEntropyIndex(entropies);
+    return key;
+  }
 
   // /**
   //  * Creates a cell, meets all pre-spawn active cells,
@@ -152,16 +149,31 @@ export class Life /*implements LifeRegistry<LifeCell>*/ {
   //   }
   // }
 
+  private lastSpawnedKey: number | null = null;
+
   async spawn(): Promise<void> {
+    // tone
     const keys = Life.PIANO_SEMITONE_TO - Life.PIANO_SEMITONE_FROM + 1;
-    const tone = Life.PIANO_SEMITONE_FROM + Math.floor(Math.random() * keys);
+    //const tone = Life.PIANO_SEMITONE_FROM + Math.floor(Math.random() * keys);
+    let tone: number;
+    if (this.lastSpawnedKey === null) {
+      tone = Life.PIANO_SEMITONE_FROM + Math.floor(Math.random() * keys);
+    } else {
+      tone = this.pickNextSpawnMidi(this.lastSpawnedKey);
+      this.lastSpawnedKey = tone;
+    }
+
+    // duration
     const duration = DURATION_MIN + Math.random() * (Life.DURATION_TO - DURATION_MIN);
+ 
+    // log
     this.log?.(`spawn ${tone} ${duration}`);
 
     const cell = new LifeCell(tone, duration);
     await this.register(cell);
 
     await this.player.play(cell);
+    // what about unregistering the cell?
   }
 
   private tick(): void {

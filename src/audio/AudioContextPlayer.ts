@@ -91,12 +91,12 @@ export class AudioContextPlayer {
         const instrument = "church_organ";
         const buffer = await this.getSampleBuffer(instrument, cell.tone);
 
-        if (buffer.duration <= AudioContextPlayer.GAIN_SMOOTH_TIME / 1000) {
+        const smoothSec = Math.min(cell.duration / 2, AudioContextPlayer.GAIN_SMOOTH_TIME) / 1000;  
+        if (buffer.duration <= smoothSec) {
           throw new Error(
-            `buffer.duration (${buffer.duration}s) must exceed GAIN_SMOOTH_TIME (${AudioContextPlayer.GAIN_SMOOTH_TIME}ms) for crossfade scheduling`,
+            `buffer.duration (${buffer.duration}s) must exceed smooth time (${smoothSec}s) for crossfade scheduling`,
           );
         }
-        const smoothSec = Math.min(buffer.duration / 2, AudioContextPlayer.GAIN_SMOOTH_TIME / 1000);  
 
         const master = new GainNode(this.audioContext, { gain: 1 });
         master.connect(this.audioContext.destination);
